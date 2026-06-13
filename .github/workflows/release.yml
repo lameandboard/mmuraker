@@ -1,0 +1,70 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build & publish debug APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create the GitHub Release and upload assets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Install Android NDK
+        run: |
+          set -o pipefail
+          echo "y" | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;25.1.8937393" 2>&1 | tail -5
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Rename APK with version tag
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          cp build/app/outputs/flutter-apk/app-debug.apk \
+             "build/app/outputs/flutter-apk/mmuraker-${VERSION}-debug.apk"
+
+      - name: Create GitHub Release and upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "mmuraker ${{ github.ref_name }}"
+          body: |
+            ## mmuraker ${{ github.ref_name }}
+
+            ### Download
+            Click **mmuraker-${{ github.ref_name }}-debug.apk** below under **Assets** to install on your Android device (API 25 / Android 7.1+).
+
+            > ⚠️ This is a **debug build** (signed with the Flutter debug key). Android may show an "Install from unknown sources" prompt — that is expected.
+            > For a release-signed APK, add `KEYSTORE_*` secrets to the repository and update the workflow.
+
+            ### What's in this release
+            See the [commit history](../../commits/${{ github.ref_name }}) for changes since the last tag.
+          draft: false
+          prerelease: false
+          files: build/app/outputs/flutter-apk/mmuraker-${{ github.ref_name }}-debug.apk
