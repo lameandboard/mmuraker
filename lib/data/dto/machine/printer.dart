@@ -131,6 +131,8 @@ class Extruder with _$Extruder {
     /// Smooth time for pressure advance.
     @Default(0) double smoothTime,
   }) = _Extruder;
+
+  const Extruder._();
 }
 
 /// Generic temperature sensor (bed, chamber, etc.).
@@ -142,4 +144,6 @@ class TemperatureSensor with _$TemperatureSensor {
     @Default(0) double target,
     @Default(0) double power,
   }) = _TemperatureSensor;
+
+  const TemperatureSensor._();
 }

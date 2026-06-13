@@ -84,7 +84,9 @@ class DashboardPage extends HookConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.emergency_outlined),
                 tooltip: 'Emergency Stop',
-                foregroundColor: Theme.of(context).colorScheme.error,
+                style: IconButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
                 onPressed: () => _confirmEmergencyStop(
                   context,
                   printerService,
