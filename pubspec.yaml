@@ -35,8 +35,6 @@ dependencies:
   wireguard_flutter: ^1.0.3
   # OpenVPN — .ovpn config-based
   openvpn_flutter: ^1.3.2
-  # IKEv2 / IPSec / L2TP / PPTP — strongSwan wrapper (Android)
-  flutter_vpn: ^3.0.2
 
   # ── Local storage ─────────────────────────────────────────────────────────
   hive_flutter: ^1.1.0
