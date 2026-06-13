@@ -14,8 +14,6 @@ import '../../../data/model/machine.dart';
 import '../../../routing/app_router.dart';
 import '../../../service/machine_service.dart';
 import '../../../util/app_constants.dart';
-import 'notification_settings_page.dart';
-import 'printer_edit_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -26,11 +24,11 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _openPrinterEditor({String? machineId}) async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => PrinterEditPage(machineId: machineId),
-      ),
-    );
+    if (machineId == null) {
+      await context.push(Routes.addPrinter);
+    } else {
+      await context.push('${Routes.editPrinter}/$machineId');
+    }
     if (mounted) setState(() {});
   }
 
@@ -67,11 +65,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
 
     if (selectedMachine == null || !mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => NotificationSettingsPage(machineId: selectedMachine!.id),
-      ),
-    );
+    await context.push('${Routes.notificationSettings}/${selectedMachine.id}');
     if (mounted) setState(() {});
   }
 

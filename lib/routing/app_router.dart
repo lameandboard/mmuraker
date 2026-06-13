@@ -11,6 +11,7 @@ import '../ui/screens/console/console_page.dart';
 import '../ui/screens/dashboard/dashboard_page.dart';
 import '../ui/screens/debug/debug_page.dart';
 import '../ui/screens/overview/overview_page.dart';
+import '../ui/screens/settings/notification_settings_page.dart';
 import '../ui/screens/settings/printer_edit_page.dart';
 import '../ui/screens/settings/settings_page.dart';
 import '../ui/screens/settings/vpn_settings_page.dart';
@@ -25,6 +26,8 @@ abstract class Routes {
   static const settings = '/settings';
   static const vpnSettings = '/settings/vpn';
   static const addPrinter = '/settings/add-printer';
+  static const editPrinter = '/settings/edit-printer';
+  static const notificationSettings = '/settings/notifications';
   static const debug = '/debug';
 }
 
@@ -71,6 +74,20 @@ GoRouter appRouter(Ref ref) {
             path: 'add-printer',
             name: 'addPrinter',
             builder: (context, state) => const PrinterEditPage(),
+          ),
+          GoRoute(
+            path: 'edit-printer/:machineId',
+            name: 'editPrinter',
+            builder: (context, state) => PrinterEditPage(
+              machineId: state.pathParameters['machineId']!,
+            ),
+          ),
+          GoRoute(
+            path: 'notifications/:machineId',
+            name: 'notificationSettings',
+            builder: (context, state) => NotificationSettingsPage(
+              machineId: state.pathParameters['machineId']!,
+            ),
           ),
         ],
       ),

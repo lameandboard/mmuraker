@@ -79,7 +79,7 @@ class DashboardPage extends HookConsumerWidget {
                 icon: const Icon(Icons.terminal_outlined),
                 tooltip: 'G-code Console',
                 onPressed: () =>
-                    context.go('/dashboard/$machineId/console'),
+                    context.push('/dashboard/$machineId/console'),
               ),
               IconButton(
                 icon: const Icon(Icons.emergency_outlined),
@@ -178,14 +178,14 @@ class _PrintFab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             FloatingActionButton(
-              heroTag: 'pause',
+              heroTag: 'fab_pause',
               onPressed: printerService.pausePrint,
               tooltip: 'Pause',
               child: const Icon(Icons.pause),
             ),
             const Gap(12),
             FloatingActionButton(
-              heroTag: 'cancel',
+              heroTag: 'fab_cancel',
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
               foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               onPressed: printerService.cancelPrint,
@@ -195,6 +195,7 @@ class _PrintFab extends StatelessWidget {
           ],
         ),
       'paused' => FloatingActionButton.extended(
+          heroTag: 'fab_resume',
           onPressed: printerService.resumePrint,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Resume'),

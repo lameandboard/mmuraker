@@ -29,12 +29,12 @@ class OverviewPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
       body: machines.isEmpty
-          ? _EmptyState(onAdd: () => context.go('/settings/add-printer'))
+          ? _EmptyState(onAdd: () => context.push('/settings/add-printer'))
           : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: machines.length,
@@ -42,7 +42,8 @@ class OverviewPage extends ConsumerWidget {
                   _MachineCard(machine: machines[i]),
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/settings/add-printer'),
+        heroTag: 'overviewAddPrinter',
+        onPressed: () => context.push('/settings/add-printer'),
         icon: const Icon(Icons.add),
         label: const Text('Add Printer'),
       ),
@@ -78,7 +79,7 @@ class _MachineCard extends StatelessWidget {
             const Icon(Icons.chevron_right),
           ],
         ),
-        onTap: () => context.go('/dashboard/${machine.id}'),
+        onTap: () => context.push('/dashboard/${machine.id}'),
       ),
     );
   }

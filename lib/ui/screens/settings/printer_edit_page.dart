@@ -5,13 +5,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../data/model/machine.dart';
 import '../../../data/model/vpn_config.dart';
+import '../../../routing/app_router.dart';
 import '../../../service/machine_service.dart';
+import '../../../service/network_service.dart';
 import '../../../util/app_constants.dart';
-import 'vpn_settings_page.dart';
 
 class PrinterEditPage extends ConsumerStatefulWidget {
   const PrinterEditPage({super.key, this.machineId});
@@ -32,6 +34,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
 
   bool _apiKeyObscured = true;
   bool _saving = false;
+  bool _testingConnection = false;
   bool _initialised = false;
   bool _syncingWs = false;
   bool _wsManuallyEdited = false;
@@ -144,7 +147,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
 
       if (!mounted) return machine;
       if (popAfterSave) {
-        Navigator.of(context).pop(true);
+        context.pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Printer saved.')),
@@ -163,11 +166,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     final machine = await _persistMachine(popAfterSave: false);
     if (machine == null || !mounted) return;
 
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => VpnSettingsPage(machineId: machine.id),
-      ),
-    );
+    await context.push('${Routes.vpnSettings}/${machine.id}');
 
     final refreshed = ref.read(machineServiceProvider).findById(machine.id);
     if (mounted) {
@@ -175,6 +174,70 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
         _vpnConfig = refreshed?.vpnConfig;
       });
     }
+  }
+
+  Future<void> _testConnection() async {
+    final httpUrl = _httpUrlController.text.trim();
+    final urlError = _validateHttpUrl(httpUrl);
+    if (urlError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(urlError),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _testingConnection = true);
+    try {
+      final reachable =
+          await ref.read(networkServiceProvider).isReachable(httpUrl);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            reachable
+                ? 'Connection successful! Printer is reachable.'
+                : 'Connection failed. Check the URL and network settings.',
+          ),
+          backgroundColor: reachable
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _testingConnection = false);
+    }
+  }
+
+  Future<void> _deletePrinter() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Printer?'),
+        content: const Text(
+          'This will permanently remove the printer configuration.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await ref.read(machineServiceProvider).deleteMachine(_currentMachineId!);
+    if (mounted) context.pop();
   }
 
   int _extractPort(String httpUrl) {
@@ -339,6 +402,18 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
                     : 'Configure VPN (${_vpnConfig!.protocolDisplayName})',
               ),
             ),
+            const Gap(12),
+            OutlinedButton.icon(
+              onPressed: (_saving || _testingConnection) ? null : _testConnection,
+              icon: _testingConnection
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.network_check_outlined),
+              label: Text(_testingConnection ? 'Testing...' : 'Test Connection'),
+            ),
             const Gap(24),
             FilledButton.icon(
               onPressed: _saving ? null : () => _persistMachine(popAfterSave: true),
@@ -351,6 +426,20 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
                   : const Icon(Icons.save_outlined),
               label: Text(_saving ? 'Saving...' : 'Save'),
             ),
+            if (isEditing) ...[
+              const Gap(12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+                onPressed: _saving ? null : _deletePrinter,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Delete Printer'),
+              ),
+            ],
           ],
         ),
       ),

@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../data/model/machine.dart';
@@ -136,7 +137,7 @@ class _VpnSettingsPageState extends ConsumerState<VpnSettingsPage> {
       };
 
       await ref.read(machineServiceProvider).updateMachine(machine);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) context.pop();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
