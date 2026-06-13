@@ -40,6 +40,9 @@ class MachineService {
     if (!Hive.isAdapterRegistered(AppConstants.vpnConfigAdapterId)) {
       Hive.registerAdapter(VpnConfigAdapter());
     }
+    if (!Hive.isAdapterRegistered(AppConstants.vpnProtocolAdapterId)) {
+      Hive.registerAdapter(VpnProtocolAdapter());
+    }
     _box = await Hive.openBox<Machine>(AppConstants.machineBoxName);
     logger.info('MachineService: loaded ${_box.length} machine(s)');
   }
@@ -61,6 +64,7 @@ class MachineService {
     int port = AppConstants.defaultMoonrakerPort,
     String? apiKey,
     VpnConfig? vpnConfig,
+    String? webcamUrl,
   }) async {
     final wsUrl = _buildWsUrl(httpUrl, port);
     final machine = Machine(
@@ -71,6 +75,7 @@ class MachineService {
       port: port,
       apiKey: apiKey,
       vpnConfig: vpnConfig,
+      webcamUrl: webcamUrl?.trim().isEmpty == true ? null : webcamUrl?.trim(),
     );
     await _box.put(machine.id, machine);
     logger.info('MachineService: added machine "${machine.name}"');

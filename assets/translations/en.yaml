@@ -1,0 +1,319 @@
+# MMURaker translation strings (English)
+# Inspired by mobileraker — all features free, no paywalls.
+
+app_name: MMURaker
+
+# ── General ────────────────────────────────────────────────────────────────────
+general:
+  ok: OK
+  cancel: Cancel
+  save: Save
+  delete: Delete
+  edit: Edit
+  add: Add
+  retry: Retry
+  refresh: Refresh
+  loading: Loading…
+  error: Error
+  unknown: Unknown
+  yes: "Yes"
+  no: "No"
+  close: Close
+  confirm: Confirm
+  none: None
+  back: Back
+  on: "On"
+  off: "Off"
+  enabled: Enabled
+  disabled: Disabled
+
+# ── Navigation ─────────────────────────────────────────────────────────────────
+nav:
+  dashboard: Dashboard
+  console: Console
+  files: Files
+  sensors: Sensors
+  spoolman: Spoolman
+  settings: Settings
+
+# ── Overview ───────────────────────────────────────────────────────────────────
+overview:
+  title: Printers
+  no_printers: No printers configured
+  no_printers_hint: Tap + to add your first printer
+  add_printer: Add Printer
+  vpn_active: VPN active
+  connecting: Connecting…
+  disconnected: Disconnected
+
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+dashboard:
+  title: Dashboard
+  printer_status: Printer Status
+  temperatures: Temperatures
+  extruder: Extruder
+  mmu: MMU
+  afc: AFC
+  webcam: Webcam
+  power: Power Devices
+  bed_mesh: Bed Mesh
+  z_offset: Z Offset
+  speed_flow: Speed & Flow
+  sensors: Sensors
+
+# ── Printer status card ────────────────────────────────────────────────────────
+printer_status:
+  klippy_ready: Ready
+  klippy_disconnected: Disconnected
+  klippy_error: Error
+  klippy_shutdown: Shutdown
+  printing: Printing
+  paused: Paused
+  complete: Complete
+  cancelled: Cancelled
+  idle: Idle
+  eta: ETA
+  elapsed: Elapsed
+  progress: Progress
+  file: File
+  layer: "Layer {current} / {total}"
+  emergency_stop: Emergency Stop
+  emergency_stop_confirm: Are you sure you want to trigger an emergency stop?
+  pause: Pause
+  resume: Resume
+  cancel_print: Cancel Print
+  cancel_print_confirm: Are you sure you want to cancel the current print?
+
+# ── Temperature card ───────────────────────────────────────────────────────────
+temperature:
+  set_target: Set Target Temperature
+  extruder: "Extruder {index}"
+  bed: Heated Bed
+  chamber: Chamber
+  target: Target
+  actual: Actual
+  cooling: Cooling…
+  heating: Heating…
+  off: "Off (0°C)"
+
+# ── Extruder card ──────────────────────────────────────────────────────────────
+extruder:
+  title: Extruder
+  extrude: Extrude
+  retract: Retract
+  length_mm: "Length (mm)"
+  speed_mm_s: "Speed (mm/s)"
+  too_cold: Too cold to extrude
+
+# ── MMU / Happy Hare ───────────────────────────────────────────────────────────
+mmu:
+  title: Happy Hare MMU
+  state: State
+  tool_selected: "Tool T{tool}"
+  no_tool: No tool selected
+  bypass: Bypass mode
+  gate_available: Available
+  gate_empty: Empty
+  gate_unknown: Unknown
+  load: Load
+  unload: Unload
+  eject: Eject
+  home: Home
+  pause: Pause
+  resume: Resume
+  recover: Recover
+  servo_up: Servo Up
+  servo_down: Servo Down
+  endless_spool: Endless Spool
+  endless_spool_group: "Group {id}"
+  filament_position: Filament Position
+  tool_changes: Tool Changes
+  load_retries: Load Retries
+  clear_error: Clear Error
+  error_prefix: "Error: "
+
+# ── AFC ────────────────────────────────────────────────────────────────────────
+afc:
+  title: AFC Filament Changer
+  lane: Lane
+  lane_loaded: Loaded
+  lane_unloaded: Unloaded
+  lane_loading: Loading…
+  lane_unloading: Unloading…
+  lane_ejecting: Ejecting…
+  hub: Hub
+  buffer: Buffer
+  active: Active
+  load_lane: Load
+  unload_lane: Unload
+
+# ── Sensors ────────────────────────────────────────────────────────────────────
+sensors:
+  title: Sensors
+  filament_sensors: Filament Sensors
+  heaters: Heaters
+  temperature_sensors: Temperature Sensors
+  fans: Fans
+  other: Other
+  filament_present: Filament present
+  no_filament: No filament
+  moving: Moving
+  stopped: Stopped
+  sensor_enabled_klipper: Sensor active in Klipper
+  sensor_enabled_klipper_hint: Runout detection on — Klipper will pause on trigger
+  sensor_disabled_klipper_hint: Disabled — Klipper ignores this sensor
+  notifications_on: App notifications on
+  notifications_off: App notifications silenced
+  notifications_on_hint: Alert shown when filament runs out
+  notifications_off_hint: Silent — no alert from this sensor
+  info_two_toggles: >
+    Each sensor has two independent controls:
+    • Klipper toggle — enables/disables runout detection in the firmware
+    • Notification toggle — silences app alerts without changing Klipper
+
+# ── Console ────────────────────────────────────────────────────────────────────
+console:
+  title: Console
+  send: Send
+  clear: Clear
+  hint: Enter G-code command…
+  quick_macros: Quick Macros
+
+# ── VPN ────────────────────────────────────────────────────────────────────────
+vpn:
+  title: VPN Settings
+  protocol: Protocol
+  protocol_none: None
+  protocol_wireguard: WireGuard
+  protocol_openvpn: OpenVPN
+  protocol_ikev2_eap: "IKEv2 / EAP"
+  protocol_ikev2_psk: "IKEv2 / PSK"
+  protocol_l2tp_ipsec: "L2TP / IPSec"
+  protocol_pptp: PPTP (Insecure)
+  no_vpn_hint: No VPN configured. The app connects directly. Auto-VPN is disabled.
+  wireguard_config: WireGuard Config (.conf)
+  wireguard_hint: Paste your WireGuard .conf file content here
+  openvpn_config: OpenVPN Config (.ovpn)
+  openvpn_hint: Paste your .ovpn file content
+  openvpn_username: Username (optional)
+  openvpn_password: Password (optional)
+  server: Server address
+  username: Username
+  password: Password
+  psk: Pre-shared Key
+  ca_cert: CA Certificate (PEM, optional)
+  pptp_warning: ⚠️ PPTP is insecure and not supported on Android 10+.
+  auto_connect: Auto-connect when printer not reachable locally
+  connected: VPN Connected
+  disconnected: VPN Disconnected
+  connecting: Connecting VPN…
+
+# ── Settings ───────────────────────────────────────────────────────────────────
+settings:
+  title: Settings
+  printers: Printers
+  notifications: Notifications
+  about: About
+  version: "Version {version}"
+  github: View on GitHub
+  license: License
+  credits: Credits
+  license_text: >
+    MMURaker is a non-commercial derivative of mobileraker by Patrick Schmidt.
+    Licensed under the Mobileraker License v2.
+    See the NOTICE file for full attribution and terms.
+
+# ── Printer add/edit ───────────────────────────────────────────────────────────
+printer_edit:
+  title_add: Add Printer
+  title_edit: Edit Printer
+  display_name: Display Name
+  http_url: HTTP URL
+  http_url_hint: "http://192.168.1.100"
+  ws_url: WebSocket URL
+  ws_url_hint: "ws://192.168.1.100/websocket"
+  api_key: API Key (optional)
+  webcam_url: Webcam URL (optional)
+  configure_vpn: Configure VPN
+  url_invalid: Please enter a valid URL
+  name_required: Display name is required
+
+# ── Notification settings ──────────────────────────────────────────────────────
+notification_settings:
+  title: Notification Settings
+  print_events: Print Events
+  print_started: Print started
+  print_completed: Print completed
+  print_failed: Print failed / cancelled
+  print_progress: Print progress updates
+  print_progress_interval: Progress interval
+  klippy: Klippy
+  klippy_disconnected: Klippy disconnected
+  klippy_error: Klippy error / shutdown
+  mmu_events: MMU Events
+  mmu_error: MMU error
+  mmu_filament_change: MMU filament change complete
+  filament_sensors: Filament Sensors
+  filament_sensors_hint: Individual sensors appear here once the printer is connected.
+  filament_sensor_alert: Alert when filament runs out
+  temperature_alerts: Temperature Alerts
+  temp_target_reached: Temperature target reached
+  temp_drop_alert: Temperature drop alert
+  temp_drop_threshold: "Drop threshold (°C)"
+
+# ── Spoolman ───────────────────────────────────────────────────────────────────
+spoolman:
+  title: Spoolman
+  no_spools: No spools found
+  no_spools_hint: "Add spools in the Spoolman web interface (http://<printer-ip>:7912)"
+  remaining: "{grams} g remaining"
+  low: Low
+  use: Use
+  set_active: Active spool set to
+  set_active_failed: Failed to set spool
+  add_spool: Add Spool
+  add_spool_hint: To add spools, open the Spoolman web interface on your printer host.
+  location: Location
+  connect_error: Could not connect to Spoolman
+  connect_error_hint: Make sure Spoolman is running on your printer host.
+
+# ── Z offset ───────────────────────────────────────────────────────────────────
+z_offset:
+  title: Z Offset
+  current: Current Z Offset
+  step_size: Step Size
+  save_config: Save to Config
+
+# ── Speed / flow ───────────────────────────────────────────────────────────────
+speed_flow:
+  title: Speed & Flow
+  print_speed: Print Speed
+  flow_rate: Flow Rate
+  reset: Reset
+
+# ── Bed mesh ───────────────────────────────────────────────────────────────────
+bed_mesh:
+  title: Bed Mesh
+  no_mesh: No mesh loaded — tap Calibrate to generate one
+  calibrate: Calibrate
+  clear: Clear
+  profile: Profile
+  delta: "Δ {value} mm"
+
+# ── Power devices ──────────────────────────────────────────────────────────────
+power_devices:
+  title: Power
+  toggle_failed: Failed to toggle device
+
+# ── Webcam ─────────────────────────────────────────────────────────────────────
+webcam:
+  title: Webcam
+  no_webcam: No webcam configured
+  no_webcam_hint: Add a webcam URL in printer settings
+
+# ── Errors ─────────────────────────────────────────────────────────────────────
+errors:
+  connection_failed: Connection failed
+  timeout: Request timed out
+  unknown: An unknown error occurred
+  retry: Retry

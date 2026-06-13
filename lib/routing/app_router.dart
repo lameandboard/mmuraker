@@ -10,9 +10,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../ui/screens/console/console_page.dart';
 import '../ui/screens/dashboard/dashboard_page.dart';
 import '../ui/screens/overview/overview_page.dart';
+import '../ui/screens/settings/printer_edit_page.dart';
 import '../ui/screens/settings/settings_page.dart';
 import '../ui/screens/settings/vpn_settings_page.dart';
-import '../ui/screens/settings/printer_add_page.dart';
 
 part 'app_router.g.dart';
 
@@ -59,14 +59,16 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const SettingsPage(),
         routes: [
           GoRoute(
-            path: 'vpn',
+            path: 'vpn/:machineId',
             name: 'vpnSettings',
-            builder: (context, state) => const VpnSettingsPage(),
+            builder: (context, state) => VpnSettingsPage(
+              machineId: state.pathParameters['machineId']!,
+            ),
           ),
           GoRoute(
             path: 'add-printer',
             name: 'addPrinter',
-            builder: (context, state) => const PrinterAddPage(),
+            builder: (context, state) => const PrinterEditPage(),
           ),
         ],
       ),

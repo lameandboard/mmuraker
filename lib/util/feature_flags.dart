@@ -83,7 +83,11 @@ abstract class FeatureFlags {
 
   // ─── Misc ─────────────────────────────────────────────────────────────────
 
-  /// Spoolman filament manager integration. Always enabled.
+  /// Spoolman filament manager integration. Always **free and enabled**.
+  ///
+  /// Spoolman spool tracking (remaining filament, weight, material, colour,
+  /// vendor, per-spool print history) is available to every user at no cost.
+  /// There is no "Pro" gate, no tier check, no subscription requirement.
   static const bool spoolman = true;
 
   /// Print history and statistics. Always enabled.

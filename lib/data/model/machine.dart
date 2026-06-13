@@ -5,7 +5,7 @@
 
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../util/app_constants.dart';
+import 'package:mmuraker/util/app_constants.dart';
 import 'vpn_config.dart';
 
 part 'machine.g.dart';
@@ -47,6 +47,10 @@ class Machine extends HiveObject {
   @HiveField(7)
   String lastKnownState;
 
+  /// Optional webcam stream URL shown on the dashboard.
+  @HiveField(8)
+  String? webcamUrl;
+
   Machine({
     required this.id,
     required this.name,
@@ -56,6 +60,7 @@ class Machine extends HiveObject {
     this.apiKey,
     this.vpnConfig,
     this.lastKnownState = 'disconnected',
+    this.webcamUrl,
   });
 
   @override

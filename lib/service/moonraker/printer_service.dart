@@ -46,7 +46,7 @@ class PrinterService {
   Stream<Printer> get printerStream => _printerSubject.stream;
   Printer get current => _printerSubject.value;
 
-  final _pendingRequests = <int, Completer<Map<String, dynamic>>>{};
+  final _pendingRequests = <int, Completer<dynamic>>{};
 
   /// Connect to Moonraker at [wsUrl] with an optional [apiKey].
   Future<void> connect(String wsUrl, {String? apiKey}) async {
@@ -88,6 +88,14 @@ class PrinterService {
     await _call('printer.gcode.script', {'script': script});
   }
 
+  /// Send a raw Moonraker JSON-RPC request and return the decoded result.
+  Future<dynamic> sendJsonRpc(
+    String method, [
+    Map<String, dynamic> params = const {},
+  ]) {
+    return _call(method, params);
+  }
+
   /// Select an MMU tool by index (sends T0, T1, … G-code).
   Future<void> selectMmuTool(int toolIndex) =>
       sendGcode('T$toolIndex');
@@ -124,7 +132,8 @@ class PrinterService {
 
   Future<void> _initializePrinterState() async {
     // 1. Discover available objects (used for MMU detection).
-    final listResult = await _call('printer.objects.list', {});
+    final listResult =
+        await _call('printer.objects.list', {}) as Map<String, dynamic>;
     final objects = (listResult['objects'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
@@ -146,7 +155,7 @@ class PrinterService {
     // 5. Query current full state.
     final queryResult = await _call('printer.objects.query', {
       'objects': subscribeObjects,
-    });
+    }) as Map<String, dynamic>;
     final status = queryResult['status'] as Map<String, dynamic>? ?? {};
 
     // 6. Build initial printer state.
@@ -332,9 +341,7 @@ class PrinterService {
           if (error != null) {
             completer.completeError(error);
           } else {
-            completer.complete(
-              (msg['result'] as Map<String, dynamic>?) ?? {},
-            );
+            completer.complete(msg['result']);
           }
         }
         return;
@@ -431,12 +438,12 @@ class PrinterService {
 
   // ── JSON-RPC helpers ──────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> _call(
+  Future<dynamic> _call(
     String method,
     Map<String, dynamic> params,
   ) async {
     final id = _msgId++;
-    final completer = Completer<Map<String, dynamic>>();
+    final completer = Completer<dynamic>();
     _pendingRequests[id] = completer;
 
     final payload = jsonEncode({

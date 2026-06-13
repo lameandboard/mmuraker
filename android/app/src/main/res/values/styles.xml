@@ -1,0 +1,12 @@
+<!-- mmuraker – a community derivative app inspired by mobileraker. -->
+<!-- mobileraker is Copyright (c) 2024 Patrick Schmidt (Mobileraker License v2). -->
+<!-- mmuraker is Copyright (c) 2025 mmuraker contributors (same non-commercial license). -->
+<!-- See LICENSE and NOTICE for full attribution and terms. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

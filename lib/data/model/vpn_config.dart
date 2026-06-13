@@ -5,7 +5,7 @@
 
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../util/app_constants.dart';
+import 'package:mmuraker/util/app_constants.dart';
 
 part 'vpn_config.g.dart';
 
