@@ -1,0 +1,128 @@
+name: Process Debug Report
+
+# Triggered by the MMURaker app when a user uploads a diagnostic report.
+# The app dispatches this workflow via the GitHub Actions API with the
+# Gist URL embedded in the inputs.
+#
+# The workflow fetches the Gist content and stores it as a downloadable
+# artifact in the Actions tab, keeping all diagnostic data in one place.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gist_url:
+        description: 'GitHub Gist URL containing the diagnostic report'
+        required: true
+        type: string
+      app_version:
+        description: 'App version string (e.g. 0.1.0+1)'
+        required: false
+        type: string
+        default: 'unknown'
+      platform:
+        description: 'Platform (Android / iOS)'
+        required: false
+        type: string
+        default: 'unknown'
+      device_model:
+        description: 'Device model string'
+        required: false
+        type: string
+        default: 'unknown'
+
+jobs:
+  store-report:
+    name: Store Diagnostic Report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Gist ID from URL
+        id: gist
+        run: |
+          GIST_ID=$(echo "${{ inputs.gist_url }}" | sed 's|.*/||')
+          echo "id=$GIST_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Gist content
+        id: fetch
+        run: |
+          GIST_API="https://api.github.com/gists/${{ steps.gist.outputs.id }}"
+          echo "Fetching: $GIST_API"
+          curl -sL \
+            -H "Accept: application/vnd.github+json" \
+            "$GIST_API" > gist_meta.json
+          # Extract the first .md file content
+          python3 -c "
+          import json, sys
+          with open('gist_meta.json') as f:
+              data = json.load(f)
+          files = data.get('files', {})
+          for name, info in files.items():
+              if name.endswith('.md'):
+                  with open('diagnostic_report.md', 'w') as out:
+                      out.write(info.get('content', ''))
+                  print(f'Saved: {name}')
+                  break
+          "
+          # Also save device-info.txt if present
+          python3 -c "
+          import json
+          with open('gist_meta.json') as f:
+              data = json.load(f)
+          files = data.get('files', {})
+          if 'device-info.txt' in files:
+              with open('device_info.txt', 'w') as out:
+                  out.write(files['device-info.txt'].get('content', ''))
+              print('Saved: device-info.txt')
+          "
+
+      - name: Create report summary
+        run: |
+          cat > report_summary.md << EOF
+          # Diagnostic Report Received
+
+          | Field | Value |
+          |-------|-------|
+          | Gist URL | ${{ inputs.gist_url }} |
+          | App Version | ${{ inputs.app_version }} |
+          | Platform | ${{ inputs.platform }} |
+          | Device | ${{ inputs.device_model }} |
+          | Received | $(date -u +"%Y-%m-%dT%H:%M:%SZ") |
+          | Workflow Run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
+          EOF
+
+      - name: Upload diagnostic report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic-report-${{ github.run_number }}-${{ inputs.platform }}
+          path: |
+            diagnostic_report.md
+            device_info.txt
+            report_summary.md
+            gist_meta.json
+          retention-days: 90
+
+      - name: Add run summary
+        run: |
+          echo "## 📋 Diagnostic Report Stored" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Gist** | [${{ inputs.gist_url }}](${{ inputs.gist_url }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **App** | \`${{ inputs.app_version }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Platform** | ${{ inputs.platform }} — ${{ inputs.device_model }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact retained for 90 days. [Download from the Artifacts section above.](#artifacts)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f diagnostic_report.md ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>Report preview</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            head -60 diagnostic_report.md >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+          fi
