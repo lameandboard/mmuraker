@@ -51,7 +51,7 @@ class PrinterService {
   /// Connect to Moonraker at [wsUrl] with an optional [apiKey].
   Future<void> connect(String wsUrl, {String? apiKey}) async {
     await disconnect();
-    logger.info('PrinterService[$machineId]: connecting to $wsUrl');
+    appLogger.info('PrinterService[$machineId]: connecting to $wsUrl');
 
     final headers = <String, dynamic>{};
     if (apiKey != null && apiKey.isNotEmpty) {
@@ -70,7 +70,7 @@ class PrinterService {
       );
       await _initializePrinterState();
     } catch (e, st) {
-      logger.error('PrinterService[$machineId]: connection failed', e, st);
+      appLogger.error('PrinterService[$machineId]: connection failed', e, st);
     }
   }
 
@@ -173,7 +173,7 @@ class PrinterService {
       'objects': subscribeObjects,
     });
 
-    logger.info(
+    appLogger.info(
       'PrinterService[$machineId]: initialised '
       '(klippy=${printer.klippyState}, hasMmu=$hasMmu)',
     );
@@ -370,7 +370,7 @@ class PrinterService {
         ));
       }
     } catch (e) {
-      logger.warning('PrinterService[$machineId]: parse error: $e');
+      appLogger.warning('PrinterService[$machineId]: parse error: $e');
     }
   }
 
@@ -420,7 +420,7 @@ class PrinterService {
   }
 
   void _onError(Object error) {
-    logger.error('PrinterService[$machineId]: WebSocket error', error);
+    appLogger.error('PrinterService[$machineId]: WebSocket error', error);
     _printerSubject.add(current.copyWith(
       klippyReady: false,
       klippyState: 'error',
@@ -429,7 +429,7 @@ class PrinterService {
   }
 
   void _onDone() {
-    logger.info('PrinterService[$machineId]: WebSocket closed');
+    appLogger.info('PrinterService[$machineId]: WebSocket closed');
     _printerSubject.add(current.copyWith(
       klippyReady: false,
       klippyState: 'disconnected',

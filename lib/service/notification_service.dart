@@ -54,7 +54,7 @@ class NotificationService {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
-    logger.info('NotificationService: initialised');
+    appLogger.info('NotificationService: initialised');
   }
 
   // ── Settings access ────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ class NotificationService {
     NotificationSettings settings,
   ) async {
     await _box.put(machineId, settings);
-    logger.info('NotificationService: saved settings for $machineId');
+    appLogger.info('NotificationService: saved settings for $machineId');
   }
 
   // ── Notification dispatch ──────────────────────────────────────────────────
@@ -302,7 +302,7 @@ class NotificationService {
     try {
       await _plugin.show(id, title, body, details);
     } catch (e, st) {
-      logger.error('NotificationService: failed to show notification', e, st);
+      appLogger.error('NotificationService: failed to show notification', e, st);
     }
   }
 
