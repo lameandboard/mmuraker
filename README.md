@@ -50,12 +50,27 @@ A mobileraker-derived Flutter app for Klipper/Moonraker 3D printers, with added 
 - Android SDK (for APK builds) — min SDK 25
 - A Klipper printer running Moonraker
 
-### Building the APK
+### Downloading a pre-built APK
+
+Go to the [Releases page](../../releases) and download the `.apk` file from the latest release's **Assets** section.
+Every time a new version tag (e.g. `v1.0.0`) is pushed, GitHub Actions automatically builds the APK and attaches it to the release.
+
+### Publishing a new release (maintainers)
+
+1. Tag the commit you want to release:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+2. The [Release APK](.github/workflows/release.yml) workflow triggers automatically, builds the debug APK, and creates a GitHub Release with the APK attached under **Assets**.
+3. Users can download `mmuraker-v1.0.0-debug.apk` directly from the release page.
+
+### Building locally
 
 ```bash
 flutter pub get
-flutter build apk --release
-# output: build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --debug
+# output: build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 ### Remote access via WireGuard (auto-VPN)
