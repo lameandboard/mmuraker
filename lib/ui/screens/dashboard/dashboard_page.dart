@@ -39,20 +39,25 @@ class DashboardPage extends HookConsumerWidget {
     final machine = machineService.findById(machineId);
 
     // Connect on first build, disconnect on dispose.
+    // IMPORTANT: capture every service reference *before* returning the
+    // cleanup closure.  Calling `ref.read(...)` inside the closure is
+    // unsafe because `ref` may have been disposed by the time the cleanup
+    // runs, which would throw "Cannot use ref after the widget was disposed."
     useEffect(() {
       if (machine == null) return null;
       final service = ref.read(printerServiceProvider(machineId));
       service.connect(machine.wsUrl, apiKey: machine.apiKey);
 
-      // Attach VPN auto-connect.
-      ref.read(vpnServiceProvider).attachToMachine(
-            httpUrl: machine.httpUrl,
-            vpnConfig: machine.vpnConfig,
-          );
+      // Attach VPN auto-connect – capture vpnService now, not in the closure.
+      final vpnService = ref.read(vpnServiceProvider);
+      vpnService.attachToMachine(
+        httpUrl: machine.httpUrl,
+        vpnConfig: machine.vpnConfig,
+      );
 
       return () {
         service.disconnect();
-        ref.read(vpnServiceProvider).detach();
+        vpnService.detach();
       };
     }, [machineId]);
 
