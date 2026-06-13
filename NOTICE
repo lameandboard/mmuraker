@@ -189,6 +189,22 @@ informed this work originate from mobileraker.
     License: BSD-3-Clause  —  https://pub.dev/packages/collection
 
 ════════════════════════════════════════════════════════════════════════════════
+ Explicitly excluded components
+════════════════════════════════════════════════════════════════════════════════
+  The following components present in the upstream mobileraker project are
+  intentionally NOT included in mmuraker:
+
+  • Google Mobile Ads / AdMob  — no advertising of any kind
+  • firebase_* packages        — no analytics, crashlytics, or remote config
+  • purchases_flutter          — no in-app purchases or subscription gating
+  • RevenueCat                 — no paywall or entitlement checks
+  • rate_my_app                — no "rate this app" prompt
+  • live_activities            — no iOS Live Activities
+  • awesome_notifications_fcm  — no Firebase push (local notifications only)
+
+  All features are free and unlocked for every user without exception.
+
+════════════════════════════════════════════════════════════════════════════════
  Flutter SDK
 ════════════════════════════════════════════════════════════════════════════════
   Flutter SDK — Copyright (c) 2014 The Flutter Authors

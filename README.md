@@ -32,6 +32,9 @@ A mobileraker-derived Flutter app for Klipper/Moonraker 3D printers, with added 
 - **MMU state display** – shows active tool, filament colours, and error status in the dashboard
 - **Print metadata** – surfaces MMU print info (`mmuPrint`, `referencedTools`, `filamentColors`) from G-code file metadata
 
+### No ads, no paywalls, no tracking
+- **No ads, no paywalls, no tracking, no popups** — no AdMob, no subscriptions, no "support the dev" nags, no rating prompts, no donation dialogs, no analytics phoning home
+
 ### Auto-VPN (WireGuard)
 - **Local-first** – the app always tries to reach the printer on the LAN first
 - **Auto-connect** – if the printer is unreachable locally AND a WireGuard config has been saved, the VPN tunnel starts automatically
