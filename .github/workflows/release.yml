@@ -67,4 +67,5 @@ jobs:
             See the [commit history](../../commits/${{ github.ref_name }}) for changes since the last tag.
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
           files: build/app/outputs/flutter-apk/mmuraker-${{ github.ref_name }}-debug.apk
