@@ -90,7 +90,7 @@ class NetworkService {
         ? PrinterReachability.localReachable
         : PrinterReachability.localUnreachable;
     if (next != _last) {
-      logger.info('NetworkService: reachability → $next ($httpUrl)');
+      appLogger.info('NetworkService: reachability → $next ($httpUrl)');
     }
     _emit(next);
   }

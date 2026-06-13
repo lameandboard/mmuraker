@@ -45,7 +45,7 @@ class MachineService {
       Hive.registerAdapter(VpnProtocolAdapter());
     }
     _box = await Hive.openBox<Machine>(AppConstants.machineBoxName);
-    logger.info('MachineService: loaded ${_box!.length} machine(s)');
+    appLogger.info('MachineService: loaded ${_box!.length} machine(s)');
   }
 
   /// All saved machines.
@@ -84,7 +84,7 @@ class MachineService {
       webcamUrl: webcamUrl?.trim().isEmpty == true ? null : webcamUrl?.trim(),
     );
     await box.put(machine.id, machine);
-    logger.info('MachineService: added machine "${machine.name}"');
+    appLogger.info('MachineService: added machine "${machine.name}"');
     return machine;
   }
 
@@ -96,7 +96,7 @@ class MachineService {
       throw StateError('MachineService is not initialized');
     }
     await box.put(machine.id, machine);
-    logger.info('MachineService: updated machine "${machine.name}"');
+    appLogger.info('MachineService: updated machine "${machine.name}"');
   }
 
   /// Delete a machine by id.
@@ -107,7 +107,7 @@ class MachineService {
       throw StateError('MachineService is not initialized');
     }
     await box.delete(id);
-    logger.info('MachineService: deleted machine $id');
+    appLogger.info('MachineService: deleted machine $id');
   }
 
   /// Save (or replace) the WireGuard VPN config for a machine.
@@ -116,7 +116,7 @@ class MachineService {
     if (machine == null) return;
     machine.vpnConfig = config;
     await machine.save();
-    logger.info('MachineService: saved VPN config for "${machine.name}"');
+    appLogger.info('MachineService: saved VPN config for "${machine.name}"');
   }
 
   /// Remove the VPN config from a machine.

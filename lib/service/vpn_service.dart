@@ -128,7 +128,7 @@ class VpnService {
 
   Future<void> _connect(VpnConfig config) async {
     if (config.protocol != VpnProtocol.wireguard) {
-      logger.warning(
+      appLogger.warning(
         'VpnService: unsupported protocol for auto-connect: ${config.protocol}',
       );
       _setState(VpnTunnelState.notConfigured);
@@ -136,13 +136,13 @@ class VpnService {
     }
     final wgConfigBlock = config.wgConfigBlock?.trim();
     if (wgConfigBlock == null || wgConfigBlock.isEmpty) {
-      logger.warning('VpnService: missing WireGuard config block');
+      appLogger.warning('VpnService: missing WireGuard config block');
       _setState(VpnTunnelState.notConfigured);
       return;
     }
 
     _setState(VpnTunnelState.connecting);
-    logger.info('VpnService: starting WireGuard tunnel "${config.label}"');
+    appLogger.info('VpnService: starting WireGuard tunnel "${config.label}"');
     try {
       await WireGuardFlutter.instance.initialize(interfaceName: 'mmuraker0');
       await WireGuardFlutter.instance.startVpn(
@@ -151,21 +151,21 @@ class VpnService {
         providerBundleIdentifier: 'com.mmuraker.android.network',
       );
       _setState(VpnTunnelState.connected);
-      logger.info('VpnService: tunnel up');
+      appLogger.info('VpnService: tunnel up');
     } catch (e, st) {
-      logger.error('VpnService: failed to start tunnel', e, st);
+      appLogger.error('VpnService: failed to start tunnel', e, st);
       _setState(VpnTunnelState.error);
     }
   }
 
   Future<void> _disconnect() async {
-    logger.info('VpnService: stopping WireGuard tunnel');
+    appLogger.info('VpnService: stopping WireGuard tunnel');
     try {
       await WireGuardFlutter.instance.stopVpn();
       _setState(VpnTunnelState.idle);
-      logger.info('VpnService: tunnel down');
+      appLogger.info('VpnService: tunnel down');
     } catch (e, st) {
-      logger.error('VpnService: failed to stop tunnel', e, st);
+      appLogger.error('VpnService: failed to stop tunnel', e, st);
     }
   }
 
