@@ -35,6 +35,7 @@ jobs:
 
       - name: Install Android NDK
         run: |
+          set -o pipefail
           echo "y" | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
             "ndk;25.1.8937393" 2>&1 | tail -5
 
