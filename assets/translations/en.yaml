@@ -317,3 +317,23 @@ errors:
   timeout: Request timed out
   unknown: An unknown error occurred
   retry: Retry
+
+# ── Debug / Diagnostics ────────────────────────────────────────────────────────
+debug:
+  title: Debug & Diagnostics
+  tab_logs: Live Logs
+  tab_report: Report
+  upload_gist: Upload to GitHub Gist
+  upload_gist_subtitle: Creates a public Gist with all logs and device info. No account needed.
+  create_issue: Create GitHub Issue
+  create_issue_subtitle: Opens issue tracker with report pre-filled.
+  copy_clipboard: Copy Report to Clipboard
+  copy_clipboard_subtitle: Copies the full Markdown report to clipboard.
+  clear_logs: Clear Log History
+  logs_cleared: Log history cleared
+  copied: Gist URL copied
+  report_copied: Report copied to clipboard
+  upload_success: "✅ Report uploaded! Tap the link to view or share."
+  upload_failed: "❌ Upload failed: {error}"
+  how_it_works: How debug reports work
+  how_it_works_body: "1. Tap Upload — creates a public Gist with your device info, app version, and full log history.\n\n2. You get a shareable URL — paste it into a GitHub Issue or share it directly.\n\n3. Tap Create GitHub Issue to open a pre-filled bug report in your browser."

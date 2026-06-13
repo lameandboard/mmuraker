@@ -125,7 +125,7 @@ class GithubReportService {
       'Content-Type': 'application/json',
       'Accept': 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
-      if (token != null && token.isNotEmpty) 'Authorization': '******',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
 
     final resp = await http
@@ -157,7 +157,7 @@ class GithubReportService {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/vnd.github+json',
-      'Authorization': '******',
+      'Authorization': 'Bearer $token',
       'X-GitHub-Api-Version': '2022-11-28',
     };
 

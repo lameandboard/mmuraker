@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../ui/screens/console/console_page.dart';
 import '../ui/screens/dashboard/dashboard_page.dart';
+import '../ui/screens/debug/debug_page.dart';
 import '../ui/screens/overview/overview_page.dart';
 import '../ui/screens/settings/printer_edit_page.dart';
 import '../ui/screens/settings/settings_page.dart';
@@ -24,6 +25,7 @@ abstract class Routes {
   static const settings = '/settings';
   static const vpnSettings = '/settings/vpn';
   static const addPrinter = '/settings/add-printer';
+  static const debug = '/debug';
 }
 
 @riverpod
@@ -71,6 +73,13 @@ GoRouter appRouter(Ref ref) {
             builder: (context, state) => const PrinterEditPage(),
           ),
         ],
+      ),
+      GoRoute(
+        path: Routes.debug,
+        name: 'debug',
+        builder: (context, state) => DebugPage(
+          machineId: state.uri.queryParameters['machineId'],
+        ),
       ),
     ],
   );

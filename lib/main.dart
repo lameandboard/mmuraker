@@ -3,6 +3,8 @@
 // mmuraker is Copyright (c) 2025 mmuraker contributors (same non-commercial license).
 // See LICENSE and NOTICE for full attribution and terms.
 
+import 'dart:ui';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -11,9 +13,26 @@ import 'package:mmuraker/routing/app_router.dart';
 import 'package:mmuraker/service/machine_service.dart';
 import 'package:mmuraker/service/vpn_service.dart';
 import 'package:mmuraker/ui/theme/theme_setup.dart';
+import 'package:mmuraker/util/logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ── Crash handler: catch all unhandled Flutter framework errors ──────────
+  FlutterError.onError = (FlutterErrorDetails details) {
+    appLogger.error(
+      'Unhandled Flutter error: ${details.exception}',
+      details.exception,
+      details.stack,
+    );
+    FlutterError.presentError(details);
+  };
+
+  // ── Catch platform/async errors outside Flutter framework ────────────────
+  PlatformDispatcher.instance.onError = (error, stack) {
+    appLogger.error('Unhandled platform error: $error', error, stack);
+    return true; // mark as handled so the app doesn't crash silently
+  };
 
   await EasyLocalization.ensureInitialized();
 

@@ -5,11 +5,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/model/machine.dart';
+import '../../../routing/app_router.dart';
 import '../../../service/machine_service.dart';
 import '../../../util/app_constants.dart';
 import 'notification_settings_page.dart';
@@ -192,6 +194,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   onTap: machines.isEmpty
                       ? null
                       : () => _openNotificationSettings(machines),
+                ),
+              ),
+              const Gap(12),
+              const _SectionHeader('Developer / Debug'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.bug_report_outlined),
+                  title: const Text('Debug & Diagnostics'),
+                  subtitle: const Text(
+                      'View logs, generate reports, upload to GitHub Gist.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(Routes.debug),
                 ),
               ),
               const Gap(12),
