@@ -35,6 +35,9 @@ abstract class AppConstants {
   /// Hive type-adapter IDs – keep these stable across releases.
   static const int machineAdapterId = 0;
   static const int vpnConfigAdapterId = 1;
+  static const int vpnProtocolAdapterId = 2;
+  static const int notificationSettingsAdapterId = 3;
+  static const int sensorThresholdAdapterId = 4;
 
   /// Default filament colour used when no colour metadata is available.
   static const Color defaultFilamentColor = Color(0xFFB0B0B0);

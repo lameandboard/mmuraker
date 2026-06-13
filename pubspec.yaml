@@ -30,9 +30,13 @@ dependencies:
   dio: ^5.7.0
   http: ^1.2.2
 
-  # ── VPN (WireGuard) ───────────────────────────────────────────────────────
-  # wireguard_flutter uses Android VpnService + WireGuard-Go under the hood.
+  # ── VPN (multi-protocol) ──────────────────────────────────────────────────
+  # WireGuard — fast, modern, open-source
   wireguard_flutter: ^1.0.3
+  # OpenVPN — .ovpn config-based
+  openvpn_flutter: ^1.3.2
+  # IKEv2 / IPSec / L2TP / PPTP — strongSwan wrapper (Android)
+  flutter_vpn: ^3.0.2
 
   # ── Local storage ─────────────────────────────────────────────────────────
   hive_flutter: ^1.1.0
