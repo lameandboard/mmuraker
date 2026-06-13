@@ -1,0 +1,204 @@
+NOTICE
+======
+
+mmuraker
+Copyright (c) 2025 mmuraker contributors
+https://github.com/lameandboard/mmuraker
+
+This project is a derivative community application inspired by the architecture,
+design language, and UI patterns of mobileraker. All original structural concepts,
+screen layouts, dashboard card designs, and Moonraker integration patterns that
+informed this work originate from mobileraker.
+
+════════════════════════════════════════════════════════════════════════════════
+ mobileraker  —  UPSTREAM PROJECT
+════════════════════════════════════════════════════════════════════════════════
+  Author:     Patrick Schmidt
+  Repository: https://github.com/Clon1998/mobileraker
+  Website:    https://mobileraker.com
+  Contact:    dev@mobileraker.com
+
+  Mobileraker License v2
+  Copyright (c) 2024 Patrick Schmidt
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), limited
+  to non-commercial use, subject to the following conditions:
+
+  1. The above copyright notice and this permission notice shall be included in
+     all copies or substantial portions of the Software.
+
+  2. Commercial use of the Software is strictly prohibited, except with the
+     express written permission of Patrick Schmidt. Commercial use includes, but
+     is not limited to, distribution, licensing, selling, or using the Software
+     or its derivative works for any fee or consideration. To request such
+     permission, please contact dev@mobileraker.com.
+
+  3. Redistribution and use of the Software, with or without modification, are
+     permitted for non-commercial purposes only.
+
+  4. The Software is provided "as is," without warranty of any kind, express or
+     implied, including but not limited to the warranties of merchantability,
+     fitness for a particular purpose, and non-infringement. In no event shall
+     the authors or copyright holders be liable for any claim, damages or other
+     liability, whether in an action of contract, tort or otherwise, arising
+     from, out of or in connection with the Software or the use or other
+     dealings in the Software.
+
+  5. Indemnity: The user agrees to defend, indemnify, and hold harmless the
+     author and copyright holders from any claims, losses, damages, or costs
+     arising from the use of the Software.
+
+  Patrick Schmidt retains all intellectual property rights to the Software.
+
+════════════════════════════════════════════════════════════════════════════════
+ WireGuard®
+════════════════════════════════════════════════════════════════════════════════
+  WireGuard and the WireGuard logo are registered trademarks of Jason A. Donenfeld.
+  https://www.wireguard.com/
+
+  This application uses the wireguard_flutter plugin
+  (https://pub.dev/packages/wireguard_flutter) which interfaces with the
+  WireGuard tunnelling protocol. WireGuard for Android is licensed under
+  the GNU General Public License v2.0.
+  https://www.wireguard.com/license/
+
+════════════════════════════════════════════════════════════════════════════════
+ Key Flutter / Dart packages (selected)
+════════════════════════════════════════════════════════════════════════════════
+
+  hooks_riverpod / riverpod
+    Authors: Remi Rousselet and contributors
+    License: MIT  —  https://pub.dev/packages/hooks_riverpod
+
+  flutter_hooks
+    Authors: Remi Rousselet and contributors
+    License: MIT  —  https://pub.dev/packages/flutter_hooks
+
+  freezed / freezed_annotation
+    Authors: Remi Rousselet and contributors
+    License: MIT  —  https://pub.dev/packages/freezed
+
+  go_router
+    Authors: Flutter team and contributors (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/go_router
+
+  flex_color_scheme
+    Authors: Mike Rydstrom (rydmike)
+    License: BSD-3-Clause  —  https://pub.dev/packages/flex_color_scheme
+
+  easy_localization
+    Authors: Aye Aye Aung and contributors
+    License: MIT  —  https://pub.dev/packages/easy_localization
+
+  hive_flutter / hive
+    Authors: Simon Leier and contributors
+    License: Apache-2.0  —  https://pub.dev/packages/hive_flutter
+
+  dio
+    Authors: Flutter China and contributors
+    License: MIT  —  https://pub.dev/packages/dio
+
+  web_socket_channel
+    Authors: Dart and Flutter team (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/web_socket_channel
+
+  rxdart
+    Authors: ReactiveX contributors
+    License: Apache-2.0  —  https://pub.dev/packages/rxdart
+
+  google_fonts
+    Authors: Flutter team and contributors (Google LLC)
+    License: Apache-2.0  —  https://pub.dev/packages/google_fonts
+    Individual font licenses are available at https://fonts.google.com/
+
+  talker_flutter
+    Authors: Frezyx and contributors
+    License: MIT  —  https://pub.dev/packages/talker_flutter
+
+  permission_handler
+    Authors: Baseflow and contributors
+    License: MIT  —  https://pub.dev/packages/permission_handler
+
+  url_launcher
+    Authors: Flutter team and contributors (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/url_launcher
+
+  network_info_plus
+    Authors: Plus plugins community
+    License: BSD-3-Clause  —  https://pub.dev/packages/network_info_plus
+
+  package_info_plus
+    Authors: Plus plugins community
+    License: BSD-3-Clause  —  https://pub.dev/packages/package_info_plus
+
+  percent_indicator
+    Authors: diegoveloper and contributors
+    License: BSD-2-Clause  —  https://pub.dev/packages/percent_indicator
+
+  flutter_spinkit
+    Authors: Jeremiah Ogbomo and contributors
+    License: MIT  —  https://pub.dev/packages/flutter_spinkit
+
+  shimmer
+    Authors: HungHD and contributors
+    License: BSD-2-Clause  —  https://pub.dev/packages/shimmer
+
+  badges
+    Authors: Eugene Saturov and contributors
+    License: MIT  —  https://pub.dev/packages/badges
+
+  auto_size_text
+    Authors: Simon Leier and contributors
+    License: MIT  —  https://pub.dev/packages/auto_size_text
+
+  gap
+    Authors: Remi Rousselet and contributors
+    License: MIT  —  https://pub.dev/packages/gap
+
+  flutter_form_builder
+    Authors: danvick and contributors
+    License: MIT  —  https://pub.dev/packages/flutter_form_builder
+
+  form_builder_validators
+    Authors: danvick and contributors
+    License: MIT  —  https://pub.dev/packages/form_builder_validators
+
+  responsive_framework
+    Authors: Codelessly LLC
+    License: MIT  —  https://pub.dev/packages/responsive_framework
+
+  animated_bottom_navigation_bar
+    Authors: Lazebny Nikita and contributors
+    License: MIT  —  https://pub.dev/packages/animated_bottom_navigation_bar
+
+  shared_preferences
+    Authors: Flutter team (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/shared_preferences
+
+  path_provider
+    Authors: Flutter team (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/path_provider
+
+  uuid
+    Authors: yulian and contributors
+    License: MIT  —  https://pub.dev/packages/uuid
+
+  collection
+    Authors: Dart team (Google LLC)
+    License: BSD-3-Clause  —  https://pub.dev/packages/collection
+
+════════════════════════════════════════════════════════════════════════════════
+ Flutter SDK
+════════════════════════════════════════════════════════════════════════════════
+  Flutter SDK — Copyright (c) 2014 The Flutter Authors
+  Licensed under the BSD 3-Clause License.
+  https://flutter.dev
+
+  Dart SDK — Copyright (c) 2011 The Dart Authors
+  Licensed under the BSD 3-Clause License.
+  https://dart.dev
+
+════════════════════════════════════════════════════════════════════════════════
+
+All trademarks are the property of their respective owners.
