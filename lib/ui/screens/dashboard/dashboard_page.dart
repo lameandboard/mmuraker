@@ -10,6 +10,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/dto/machine/printer.dart';
+import '../../../data/model/machine.dart';
 import '../../../service/machine_service.dart';
 import '../../../service/moonraker/printer_service.dart';
 import '../../../service/vpn_service.dart';
@@ -34,6 +35,7 @@ class DashboardPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final machineService = ref.watch(machineServiceProvider);
+    final machines = machineService.machines;
     final machine = machineService.findById(machineId);
 
     // Connect on first build, disconnect on dispose.
@@ -52,7 +54,7 @@ class DashboardPage extends HookConsumerWidget {
         service.disconnect();
         ref.read(vpnServiceProvider).detach();
       };
-    }, const []);
+    }, [machineId]);
 
     if (machine == null) {
       return Scaffold(
@@ -73,13 +75,18 @@ class DashboardPage extends HookConsumerWidget {
           appBar: AppBar(
             title: Text(machine.name),
             actions: [
+              if (machines.length > 1)
+                _PrinterSwitcher(
+                  machines: machines,
+                  currentMachineId: machineId,
+                ),
               VpnStatusBadge(isActive: vpnState == VpnTunnelState.connected),
               const Gap(8),
               IconButton(
                 icon: const Icon(Icons.terminal_outlined),
                 tooltip: 'G-code Console',
                 onPressed: () =>
-                    context.go('/dashboard/$machineId/console'),
+                    context.push('/dashboard/$machineId/console'),
               ),
               IconButton(
                 icon: const Icon(Icons.emergency_outlined),
@@ -166,6 +173,47 @@ class DashboardPage extends HookConsumerWidget {
   }
 }
 
+class _PrinterSwitcher extends StatelessWidget {
+  const _PrinterSwitcher({
+    required this.machines,
+    required this.currentMachineId,
+  });
+
+  final List<Machine> machines;
+  final String currentMachineId;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Switch printer',
+      icon: const Icon(Icons.sync_alt_outlined),
+      onSelected: (nextMachineId) {
+        if (nextMachineId == currentMachineId) return;
+        context.pushReplacement('/dashboard/$nextMachineId');
+      },
+      itemBuilder: (context) => [
+        for (final machine in machines)
+          PopupMenuItem<String>(
+            value: machine.id,
+            child: Row(
+              children: [
+                Expanded(child: Text(machine.name)),
+                if (machine.id == currentMachineId) ...[
+                  const Gap(8),
+                  Icon(
+                    Icons.check,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _PrintFab extends StatelessWidget {
   const _PrintFab({required this.printer, required this.printerService});
   final Printer printer;
@@ -178,14 +226,14 @@ class _PrintFab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             FloatingActionButton(
-              heroTag: 'pause',
+              heroTag: 'fab_pause',
               onPressed: printerService.pausePrint,
               tooltip: 'Pause',
               child: const Icon(Icons.pause),
             ),
             const Gap(12),
             FloatingActionButton(
-              heroTag: 'cancel',
+              heroTag: 'fab_cancel',
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
               foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               onPressed: printerService.cancelPrint,
@@ -195,6 +243,7 @@ class _PrintFab extends StatelessWidget {
           ],
         ),
       'paused' => FloatingActionButton.extended(
+          heroTag: 'fab_resume',
           onPressed: printerService.resumePrint,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Resume'),
