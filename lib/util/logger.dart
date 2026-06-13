@@ -7,11 +7,15 @@ import 'package:talker_flutter/talker_flutter.dart';
 
 /// Global [Talker] logger instance.
 ///
-/// Import this and call [logger.info], [logger.warning], [logger.error], etc.
-final logger = TalkerFlutter.init(
+/// Import this and call [appLogger.info], [appLogger.warning],
+/// [appLogger.error], etc.
+final appLogger = TalkerFlutter.init(
   settings: TalkerSettings(
     enabled: true,
     useHistory: true,
     maxHistoryItems: 500,
   ),
 );
+
+@Deprecated('Use appLogger instead.')
+final logger = appLogger;

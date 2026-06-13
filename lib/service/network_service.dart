@@ -27,7 +27,11 @@ enum PrinterReachability {
 }
 
 @riverpod
-NetworkService networkService(Ref ref) => NetworkService(ref);
+NetworkService networkService(Ref ref) {
+  final service = NetworkService(ref);
+  ref.onDispose(service.dispose);
+  return service;
+}
 
 /// Continuously monitors whether a Moonraker instance is reachable on the
 /// local network.  When it is not reachable the [VpnService] is notified so

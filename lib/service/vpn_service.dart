@@ -36,7 +36,11 @@ enum VpnTunnelState {
 }
 
 @riverpod
-VpnService vpnService(Ref ref) => VpnService(ref);
+VpnService vpnService(Ref ref) {
+  final service = VpnService(ref);
+  ref.onDispose(service.dispose);
+  return service;
+}
 
 /// Manages the WireGuard auto-VPN tunnel.
 ///
@@ -123,13 +127,27 @@ class VpnService {
   Future<void> disconnect() => _disconnect();
 
   Future<void> _connect(VpnConfig config) async {
+    if (config.protocol != VpnProtocol.wireguard) {
+      logger.warning(
+        'VpnService: unsupported protocol for auto-connect: ${config.protocol}',
+      );
+      _setState(VpnTunnelState.notConfigured);
+      return;
+    }
+    final wgConfigBlock = config.wgConfigBlock?.trim();
+    if (wgConfigBlock == null || wgConfigBlock.isEmpty) {
+      logger.warning('VpnService: missing WireGuard config block');
+      _setState(VpnTunnelState.notConfigured);
+      return;
+    }
+
     _setState(VpnTunnelState.connecting);
     logger.info('VpnService: starting WireGuard tunnel "${config.label}"');
     try {
       await WireGuardFlutter.instance.initialize(interfaceName: 'mmuraker0');
       await WireGuardFlutter.instance.startVpn(
-        serverAddress: _extractEndpointAddress(config.configBlock),
-        wgQuickConfig: config.configBlock,
+        serverAddress: _extractEndpointAddress(wgConfigBlock),
+        wgQuickConfig: wgConfigBlock,
         providerBundleIdentifier: 'com.mmuraker.android.network',
       );
       _setState(VpnTunnelState.connected);

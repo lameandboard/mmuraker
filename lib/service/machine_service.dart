@@ -25,11 +25,12 @@ MachineService machineService(Ref ref) => MachineService(ref);
 /// `common/lib/service/machine_service.dart`, simplified and ad/paywall-free.
 class MachineService {
   MachineService(this._ref) {
-    _init();
+    _initFuture = _init();
   }
 
   final Ref _ref;
-  late final Box<Machine> _box;
+  late final Future<void> _initFuture;
+  Box<Machine>? _box;
 
   static const _uuid = Uuid();
 
@@ -44,15 +45,15 @@ class MachineService {
       Hive.registerAdapter(VpnProtocolAdapter());
     }
     _box = await Hive.openBox<Machine>(AppConstants.machineBoxName);
-    logger.info('MachineService: loaded ${_box.length} machine(s)');
+    logger.info('MachineService: loaded ${_box!.length} machine(s)');
   }
 
   /// All saved machines.
-  List<Machine> get machines => _box.values.toList();
+  List<Machine> get machines => _box?.values.toList() ?? const [];
 
   /// Find a machine by its [id].
   Machine? findById(String id) =>
-      _box.values.cast<Machine?>().firstWhere(
+      _box?.values.cast<Machine?>().firstWhere(
         (m) => m?.id == id,
         orElse: () => null,
       );
@@ -66,6 +67,11 @@ class MachineService {
     VpnConfig? vpnConfig,
     String? webcamUrl,
   }) async {
+    await _initFuture;
+    final box = _box;
+    if (box == null) {
+      throw StateError('MachineService is not initialized');
+    }
     final wsUrl = _buildWsUrl(httpUrl, port);
     final machine = Machine(
       id: _uuid.v4(),
@@ -77,20 +83,30 @@ class MachineService {
       vpnConfig: vpnConfig,
       webcamUrl: webcamUrl?.trim().isEmpty == true ? null : webcamUrl?.trim(),
     );
-    await _box.put(machine.id, machine);
+    await box.put(machine.id, machine);
     logger.info('MachineService: added machine "${machine.name}"');
     return machine;
   }
 
   /// Update an existing machine.
   Future<void> updateMachine(Machine machine) async {
-    await _box.put(machine.id, machine);
+    await _initFuture;
+    final box = _box;
+    if (box == null) {
+      throw StateError('MachineService is not initialized');
+    }
+    await box.put(machine.id, machine);
     logger.info('MachineService: updated machine "${machine.name}"');
   }
 
   /// Delete a machine by id.
   Future<void> deleteMachine(String id) async {
-    await _box.delete(id);
+    await _initFuture;
+    final box = _box;
+    if (box == null) {
+      throw StateError('MachineService is not initialized');
+    }
+    await box.delete(id);
     logger.info('MachineService: deleted machine $id');
   }
 

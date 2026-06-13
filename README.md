@@ -101,4 +101,4 @@ This is an independent derivative project focused on MMU support.
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+Mobileraker License v2 (non-commercial) — see [LICENSE](LICENSE) and [NOTICE](NOTICE)

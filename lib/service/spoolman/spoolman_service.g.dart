@@ -6,7 +6,10 @@ part of 'spoolman_service.dart';
 /// Family provider — one SpoolmanService per machine ID.
 final spoolmanServiceProvider =
     Provider.family<SpoolmanService, String>((ref, machineId) {
-  final machine = ref.watch(machineServiceProvider).getMachine(machineId);
+  final machine = ref.watch(machineServiceProvider).findById(machineId);
+  if (machine == null) {
+    throw StateError('Unknown machine ID: $machineId');
+  }
   return SpoolmanService(ref, machine);
 });
 

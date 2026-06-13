@@ -7,9 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../service/machine_service.dart';
-import '../../data/model/machine.dart';
-import '../components/common_widgets.dart';
+import '../../../data/model/machine.dart';
+import '../../../service/machine_service.dart';
 
 /// Lists all configured printers and lets users navigate to their dashboard
 /// or add a new machine.

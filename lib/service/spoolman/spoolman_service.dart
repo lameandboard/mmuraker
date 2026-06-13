@@ -27,8 +27,7 @@ class SpoolmanService {
 
   /// Base URL for the Spoolman API, auto-derived from the machine HTTP URL.
   ///
-  /// Tries Moonraker proxy path first (/spoolman/api/v1), then falls back
-  /// to direct port 7912.
+  /// Uses the Moonraker proxy path (`/spoolman/api/v1`).
   String get _baseUrl {
     final httpUrl = _machine.httpUrl.replaceAll(RegExp(r'/$'), '');
     // Moonraker proxies Spoolman at /spoolman
@@ -82,10 +81,10 @@ class SpoolmanService {
         jsonDecode(resp.body) as Map<String, dynamic>);
   }
 
-  /// Set the active spool for a given tool/extruder index in Moonraker.
+  /// Set the active spool in Moonraker.
   ///
   /// This calls the Moonraker spoolman endpoint, not Spoolman directly.
-  Future<void> setActiveSpool(int spoolId, {int toolIndex = 0}) async {
+  Future<void> setActiveSpool(int spoolId) async {
     final httpUrl = _machine.httpUrl.replaceAll(RegExp(r'/$'), '');
     final resp = await http.post(
       Uri.parse('$httpUrl/server/spoolman/spool_id'),

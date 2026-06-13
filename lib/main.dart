@@ -8,6 +8,7 @@ import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:mmuraker/routing/app_router.dart';
 import 'package:mmuraker/service/machine_service.dart';
@@ -17,6 +18,7 @@ import 'package:mmuraker/util/logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
 
   // ── Crash handler: catch all unhandled Flutter framework errors ──────────
   FlutterError.onError = (FlutterErrorDetails details) {
