@@ -54,13 +54,7 @@ class DashboardPage extends HookConsumerWidget {
         service.disconnect();
         ref.read(vpnServiceProvider).detach();
       };
-    }, [
-      machineId,
-      machine?.wsUrl,
-      machine?.apiKey,
-      machine?.httpUrl,
-      machine?.vpnConfig,
-    ]);
+    }, [machineId, machine]);
 
     if (machine == null) {
       return Scaffold(
