@@ -191,8 +191,12 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
 
     setState(() => _testingConnection = true);
     try {
+      final normalisedHttpUrl = _normaliseHttpUrl(
+        httpUrl,
+        _extractPort(httpUrl),
+      );
       final reachable =
-          await ref.read(networkServiceProvider).isReachable(httpUrl);
+          await ref.read(networkServiceProvider).isReachable(normalisedHttpUrl);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -236,8 +240,23 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     );
     if (confirmed != true || !mounted) return;
 
-    await ref.read(machineServiceProvider).deleteMachine(_currentMachineId!);
-    if (mounted) context.pop();
+    setState(() => _saving = true);
+    try {
+      await ref.read(machineServiceProvider).deleteMachine(_currentMachineId!);
+      if (mounted) context.pop();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not delete printer. Please try again.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 
   int _extractPort(String httpUrl) {
@@ -435,7 +454,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
                     color: Theme.of(context).colorScheme.error,
                   ),
                 ),
-                onPressed: _saving ? null : _deletePrinter,
+                onPressed: (_saving || _testingConnection) ? null : _deletePrinter,
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Delete Printer'),
               ),

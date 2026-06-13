@@ -23,6 +23,11 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
+  Future<void> _connectToPrinter(String machineId) async {
+    await context.push('${Routes.dashboard}/$machineId');
+    if (mounted) setState(() {});
+  }
+
   Future<void> _openPrinterEditor({String? machineId}) async {
     if (machineId == null) {
       await context.push(Routes.addPrinter);
@@ -162,11 +167,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       leading: _PrinterLeading(hasVpn: machine.vpnConfig != null),
                       title: Text(machine.name),
                       subtitle: Text(machine.httpUrl),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Edit printer',
-                        onPressed: () => _openPrinterEditor(machineId: machine.id),
+                      trailing: Wrap(
+                        spacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => _connectToPrinter(machine.id),
+                            child: const Text('Connect'),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Edit printer',
+                            onPressed: () => _openPrinterEditor(machineId: machine.id),
+                          ),
+                        ],
                       ),
+                      onTap: () => _connectToPrinter(machine.id),
                     ),
                   ),
                 ),
