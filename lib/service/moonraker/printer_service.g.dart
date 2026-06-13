@@ -19,6 +19,15 @@ class _$PrinterServiceFamily
     extends Family<PrinterService> {
   const _$PrinterServiceFamily();
 
+  @override
+  String? get name => r'printerServiceProvider';
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies => null;
+
   AutoDisposeProvider<PrinterService> call(String machineId) =>
       AutoDisposeProvider<PrinterService>.internal(
         (ref) => printerService(ref, machineId),
@@ -36,6 +45,12 @@ class _$PrinterServiceFamily
   @override
   String debugFamilyCallString(Object? argument) =>
       'printerServiceProvider($argument)';
+
+  @override
+  AutoDisposeProvider<PrinterService> getProviderOverride(
+    covariant AutoDisposeProvider<PrinterService> provider,
+  ) =>
+      call(provider.argument as String);
 }
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')

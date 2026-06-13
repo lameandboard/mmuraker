@@ -46,21 +46,28 @@ jobs:
         if: matrix.language == 'kotlin'
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.24.0'
           channel: 'stable'
 
       - name: Install Flutter dependencies
         if: matrix.language == 'kotlin'
         working-directory: .
         run: |
-          flutter pub get || true
+          flutter pub get
+
+      - name: Install Android NDK
+        if: matrix.language == 'kotlin'
+        run: |
+          set -o pipefail
+          # NDK version must match ndkVersion in android/app/build.gradle
+          echo "y" | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;25.1.8937393" 2>&1 | tail -5
 
       - name: Build Android (for Kotlin analysis)
         if: matrix.language == 'kotlin'
         working-directory: .
         run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon || true
+          flutter build apk --debug
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
