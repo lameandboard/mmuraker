@@ -55,6 +55,7 @@ Future<void> main() async {
       ],
       fallbackLocale: const Locale('en'),
       path: 'assets/translations',
+      assetLoader: const YamlAssetLoader(),
       child: const ProviderScope(child: MmuRakerApp()),
     ),
   );
