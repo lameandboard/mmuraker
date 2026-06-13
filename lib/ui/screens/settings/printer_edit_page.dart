@@ -14,6 +14,7 @@ import '../../../routing/app_router.dart';
 import '../../../service/machine_service.dart';
 import '../../../service/network_service.dart';
 import '../../../util/app_constants.dart';
+import '../../../util/logger.dart';
 
 class PrinterEditPage extends ConsumerStatefulWidget {
   const PrinterEditPage({super.key, this.machineId});
@@ -244,7 +245,12 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     try {
       await ref.read(machineServiceProvider).deleteMachine(_currentMachineId!);
       if (mounted) context.pop();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      appLogger.error(
+        'Failed to delete printer ${_currentMachineId!}',
+        error,
+        stackTrace,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
