@@ -23,16 +23,16 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  bool _openingPrinterEditor = false;
+  bool _isNavigatingToPrinterEditor = false;
 
   Future<void> _connectToPrinter(String machineId) async {
     await context.push('${Routes.dashboard}/$machineId');
   }
 
   Future<void> _openPrinterEditor({String? machineId}) async {
-    if (_openingPrinterEditor) return;
+    if (_isNavigatingToPrinterEditor) return;
 
-    _openingPrinterEditor = true;
+    _isNavigatingToPrinterEditor = true;
     try {
       if (machineId == null) {
         await context.push(Routes.addPrinter);
@@ -40,7 +40,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         await context.push('${Routes.editPrinter}/$machineId');
       }
     } finally {
-      _openingPrinterEditor = false;
+      _isNavigatingToPrinterEditor = false;
     }
   }
 
