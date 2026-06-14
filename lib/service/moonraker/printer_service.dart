@@ -388,10 +388,17 @@ class PrinterService {
     // Unsolicited notification.
     final method = msg['method'] as String?;
     if (method == 'notify_status_update') {
-      final params = msg['params'] as List?;
-      if (params != null && params.isNotEmpty) {
-        final delta = params[0] as Map<String, dynamic>;
-        _applyDelta(delta);
+      final params = msg['params'];
+      if (params is List && params.isNotEmpty) {
+        final firstParam = params.first;
+        if (firstParam is Map<String, dynamic>) {
+          final delta = firstParam;
+          _applyDelta(delta);
+        } else if (firstParam is Map &&
+            firstParam.keys.every((key) => key is String)) {
+          final delta = Map<String, dynamic>.from(firstParam);
+          _applyDelta(delta);
+        }
       }
     } else if (method == 'notify_klippy_ready') {
       _printerSubject.add(current.copyWith(

@@ -108,7 +108,7 @@ class NetworkScannerService {
         if (r != null) results.add(r);
       }
 
-      final probed = (batch + _batchSize).clamp(0, total);
+      final probed = (batch + _batchSize).clamp(0, total).toInt();
       onProgress?.call(results.length, probed, total);
     }
 
@@ -125,9 +125,13 @@ class NetworkScannerService {
       final response = await http
           .get(Uri.parse('$base/server/info'))
           .timeout(_probeTimeout);
-      if (response.statusCode >= 500) return null;
-      final name = _extractHostname(response.body) ?? host;
-      return DiscoveredPrinter(httpUrl: base, displayName: name);
+      if (response.statusCode != 200) return null;
+      final name = _extractHostname(response.body);
+      if (name == null) return null;
+      return DiscoveredPrinter(
+        httpUrl: base,
+        displayName: name.isEmpty ? host : name,
+      );
     } catch (_) {
       return null;
     }
@@ -145,7 +149,15 @@ class NetworkScannerService {
     try {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final result = data['result'] as Map<String, dynamic>?;
-      return result?['hostname'] as String?;
+      if (result == null ||
+          (!result.containsKey('moonraker_version') &&
+              !result.containsKey('klippy_connected') &&
+              !result.containsKey('klippy_state') &&
+              !result.containsKey('api_version'))) {
+        return null;
+      }
+      final hostname = result['hostname'];
+      return hostname is String ? hostname : '';
     } catch (_) {
       return null;
     }

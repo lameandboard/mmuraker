@@ -416,13 +416,16 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
               validator: _validateHttpUrlField,
             ),
             const Gap(8),
-            // Scan button – only shown on the Add screen (no machine saved yet).
-            OutlinedButton.icon(
-              onPressed: (_saving || _testingConnection) ? null : _scanNetwork,
-              icon: const Icon(Icons.wifi_find_outlined),
-              label: const Text('Scan for Printers on Local Network'),
-            ),
-            const Gap(16),
+            if (!isEditing) ...[
+              // Scan button – only shown on the Add screen (no machine saved yet).
+              OutlinedButton.icon(
+                onPressed:
+                    (_saving || _testingConnection) ? null : _scanNetwork,
+                icon: const Icon(Icons.wifi_find_outlined),
+                label: const Text('Scan for Printers on Local Network'),
+              ),
+              const Gap(16),
+            ],
             TextFormField(
               controller: _wsUrlController,
               decoration: const InputDecoration(
