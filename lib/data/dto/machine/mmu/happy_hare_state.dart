@@ -203,6 +203,16 @@ class HappyHareGateStatus with _$HappyHareGateStatus {
   }) = _HappyHareGateStatus;
 
   const HappyHareGateStatus._();
+
+  bool get isEmpty {
+    final normalized = status.trim().toLowerCase();
+    if (normalized == 'empty' ||
+        normalized == 'unloaded' ||
+        normalized == 'none') {
+      return true;
+    }
+    return material.isEmpty && spoolId < 0;
+  }
 }
 
 @freezed
@@ -215,6 +225,8 @@ class HappyHarePrintStats with _$HappyHarePrintStats {
   }) = _HappyHarePrintStats;
 
   const HappyHarePrintStats._();
+
+  int get totalToolChanges => totalTool_changes;
 }
 
 Map<String, dynamic> _extractMoonrakerObject(

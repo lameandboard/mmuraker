@@ -20,6 +20,11 @@ class BedMeshData {
     required this.maxValue,
   });
 
+  final String profileName;
+  final List<List<double>> meshMatrix;
+  final double minValue;
+  final double maxValue;
+
   factory BedMeshData.fromMoonraker(Map<String, dynamic> bedMesh) {
     final rawMatrix = bedMesh['mesh_matrix'] as List? ?? const [];
     final matrix = rawMatrix
