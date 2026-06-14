@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../ui/screens/console/console_page.dart';
 import '../ui/screens/dashboard/dashboard_page.dart';
 import '../ui/screens/debug/debug_page.dart';
 import '../ui/screens/overview/overview_page.dart';
@@ -24,6 +23,7 @@ abstract class Routes {
   static const overview = '/';
   static const dashboard = '/dashboard';
   static const console = '/console';
+  static const files = '/files';
   static const spoolman = '/spoolman';
   static const settings = '/settings';
   static const vpnSettings = '/settings/vpn';
@@ -54,8 +54,17 @@ GoRouter appRouter(Ref ref) {
           GoRoute(
             path: 'console',
             name: 'console',
-            builder: (context, state) => ConsolePage(
+            builder: (context, state) => DashboardPage(
               machineId: state.pathParameters['machineId']!,
+              initialSection: PrinterSection.console,
+            ),
+          ),
+          GoRoute(
+            path: 'files',
+            name: 'files',
+            builder: (context, state) => DashboardPage(
+              machineId: state.pathParameters['machineId']!,
+              initialSection: PrinterSection.files,
             ),
           ),
           GoRoute(
