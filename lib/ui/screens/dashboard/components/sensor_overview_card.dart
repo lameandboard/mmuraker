@@ -114,7 +114,6 @@ class SensorOverviewCard extends StatelessWidget {
     return label
         .replaceAll('_', ' ')
         .split(' ')
-        .where((part) => part.isNotEmpty)
         .map(
           (part) => part.isEmpty
               ? part
