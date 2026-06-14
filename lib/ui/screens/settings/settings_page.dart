@@ -23,15 +23,24 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
+  bool _isNavigatingToPrinterEditor = false;
+
   Future<void> _connectToPrinter(String machineId) async {
     await context.push('${Routes.dashboard}/$machineId');
   }
 
   Future<void> _openPrinterEditor({String? machineId}) async {
-    if (machineId == null) {
-      await context.push(Routes.addPrinter);
-    } else {
-      await context.push('${Routes.editPrinter}/$machineId');
+    if (_isNavigatingToPrinterEditor) return;
+
+    _isNavigatingToPrinterEditor = true;
+    try {
+      if (machineId == null) {
+        await context.push(Routes.addPrinter);
+      } else {
+        await context.push('${Routes.editPrinter}/$machineId');
+      }
+    } finally {
+      _isNavigatingToPrinterEditor = false;
     }
   }
 
@@ -132,6 +141,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         return Scaffold(
           appBar: AppBar(title: const Text('Settings')),
           floatingActionButton: FloatingActionButton.extended(
+            heroTag: null,
             onPressed: () => _openPrinterEditor(),
             icon: const Icon(Icons.add),
             label: const Text('Add Printer'),
@@ -176,7 +186,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined),
-                              tooltip: 'Edit printer',
+                              tooltip: 'Edit printer (includes Test Connection)',
                               onPressed: () => _openPrinterEditor(machineId: machine.id),
                             ),
                           ],
