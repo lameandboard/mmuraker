@@ -176,7 +176,7 @@ class _GateMap extends StatelessWidget {
         (i) {
           final gate = gates.length > i ? gates[i] : null;
           final isSelected = selected == i;
-          final isEmpty = gate?.isEmpty ?? false;
+          final isEmpty = (gate?.status ?? '').trim().toLowerCase() == 'empty';
           final color = _parseColor(gate?.color);
 
           return GestureDetector(
@@ -484,7 +484,7 @@ class _PrintStats extends StatelessWidget {
       spacing: 16,
       children: [
         _Stat('Tool changes', '${stats.toolChanges}'),
-        _Stat('Total changes', '${stats.totalToolChanges}'),
+        _Stat('Total changes', '${stats.totalTool_changes}'),
         _Stat('Load retries', '${stats.loadRetries}'),
         if (stats.failedLoadRetries > 0)
           _Stat('Failed retries', '${stats.failedLoadRetries}',
