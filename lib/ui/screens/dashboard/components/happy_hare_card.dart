@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../data/dto/machine/mmu/happy_hare_state.dart';
-import '../../../service/moonraker/printer_service.dart';
-import '../../components/common_widgets.dart';
+import '../../../../data/dto/machine/mmu/happy_hare_state.dart';
+import '../../../../service/moonraker/printer_service.dart';
+import '../../../components/common_widgets.dart';
 
 /// Full Happy Hare MMU control panel.
 ///

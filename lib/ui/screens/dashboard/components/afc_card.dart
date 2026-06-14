@@ -7,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../data/dto/machine/mmu/afc_state.dart';
-import '../../../data/dto/spoolman/spoolman_dtos.dart';
-import '../../../service/moonraker/printer_service.dart';
-import '../../../service/spoolman/spoolman_service.dart';
-import '../../components/common_widgets.dart';
-import '../../components/spool_widget.dart';
+import '../../../../data/dto/machine/mmu/afc_state.dart';
+import '../../../../data/dto/spoolman/spoolman_dtos.dart';
+import '../../../../service/moonraker/printer_service.dart';
+import '../../../../service/spoolman/spoolman_service.dart';
+import '../../../components/common_widgets.dart';
+import '../../../components/spool_widget.dart';
 
 /// AFC (Automatic Filament Changer) dashboard card.
 ///
