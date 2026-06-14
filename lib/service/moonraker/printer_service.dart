@@ -153,25 +153,54 @@ class PrinterService {
     final subscribeObjects = _buildSubscribeObjects(objects, mmuObjectKey);
 
     // 5. Query current full state.
-    final queryResult = await _call('printer.objects.query', {
-      'objects': subscribeObjects,
-    }) as Map<String, dynamic>;
-    final status = queryResult['status'] as Map<String, dynamic>? ?? {};
-
-    // 6. Build initial printer state.
-    var printer = _buildPrinter(
-      status: status,
-      availableObjects: objects,
-      availableMacros: macros,
-      hasMmu: hasMmu,
-      mmuObjectKey: mmuObjectKey,
-    );
+    //    This step is best-effort: large Happy Hare responses can trigger a
+    //    StackOverflowError in jsonDecode (deeply nested JSON).  When that
+    //    happens we fall back to an empty-but-correct Printer so we can still
+    //    subscribe to live updates and populate state incrementally.
+    Printer printer;
+    try {
+      final queryResult = await _call('printer.objects.query', {
+        'objects': subscribeObjects,
+      }) as Map<String, dynamic>;
+      final status = queryResult['status'] as Map<String, dynamic>? ?? {};
+      printer = _buildPrinter(
+        status: status,
+        availableObjects: objects,
+        availableMacros: macros,
+        hasMmu: hasMmu,
+        mmuObjectKey: mmuObjectKey,
+      );
+    } catch (e) {
+      appLogger.warning(
+        'PrinterService[$machineId]: initial state query failed ($e) '
+        '– will populate state via subscription updates',
+      );
+      // Seed a minimal-but-correct Printer so _applyDelta can process MMU
+      // deltas as soon as they arrive (it keys off mmuState.objectKey).
+      printer = Printer(
+        klippyReady: true,
+        klippyState: 'ready',
+        hasMmu: hasMmu,
+        mmuState: hasMmu && mmuObjectKey != null
+            ? MmuState(objectKey: mmuObjectKey)
+            : null,
+        availableObjects: objects,
+        availableMacros: macros,
+      );
+    }
     _printerSubject.add(printer);
 
     // 7. Subscribe to live updates.
-    await _call('printer.objects.subscribe', {
-      'objects': subscribeObjects,
-    });
+    try {
+      await _call('printer.objects.subscribe', {
+        'objects': subscribeObjects,
+      });
+    } catch (e) {
+      appLogger.warning(
+        'PrinterService[$machineId]: subscribe call failed ($e) '
+        '– live updates may not arrive',
+      );
+    }
 
     appLogger.info(
       'PrinterService[$machineId]: initialised '
@@ -329,48 +358,76 @@ class PrinterService {
   // ── WebSocket I/O ─────────────────────────────────────────────────────────
 
   void _onMessage(dynamic raw) {
+    Map<String, dynamic> msg;
     try {
-      final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+      msg = jsonDecode(raw as String) as Map<String, dynamic>;
+    } catch (e) {
+      // This can be a StackOverflowError for very large / deeply-nested Happy
+      // Hare responses, or any other decoding failure.  Fail all pending RPC
+      // completers immediately so callers don't wait for the full 10 s timeout.
+      appLogger.warning('PrinterService[$machineId]: parse error: $e');
+      _failPendingRequests(e);
+      return;
+    }
 
-      // Response to a request we sent.
-      final id = msg['id'] as int?;
-      if (id != null) {
-        final completer = _pendingRequests.remove(id);
-        if (completer != null) {
-          final error = msg['error'];
-          if (error != null) {
-            completer.completeError(error);
-          } else {
-            completer.complete(msg['result']);
-          }
+    // Response to a request we sent.
+    final id = msg['id'] as int?;
+    if (id != null) {
+      final completer = _pendingRequests.remove(id);
+      if (completer != null) {
+        final error = msg['error'];
+        if (error != null) {
+          completer.completeError(error);
+        } else {
+          completer.complete(msg['result']);
         }
-        return;
       }
+      return;
+    }
 
-      // Unsolicited notification.
-      final method = msg['method'] as String?;
-      if (method == 'notify_status_update') {
-        final params = msg['params'] as List?;
-        if (params != null && params.isNotEmpty) {
-          final delta = params[0] as Map<String, dynamic>;
+    // Unsolicited notification.
+    final method = msg['method'] as String?;
+    if (method == 'notify_status_update') {
+      final params = msg['params'];
+      if (params is List && params.isNotEmpty) {
+        final firstParam = params.first;
+        if (firstParam is Map<String, dynamic>) {
+          final delta = firstParam;
+          _applyDelta(delta);
+        } else if (firstParam is Map &&
+            firstParam.keys.every((key) => key is String)) {
+          final delta = Map<String, dynamic>.from(firstParam);
           _applyDelta(delta);
         }
-      } else if (method == 'notify_klippy_ready') {
-        _printerSubject.add(current.copyWith(
-          klippyReady: true,
-          klippyState: 'ready',
-        ));
-      } else if (method == 'notify_klippy_shutdown' ||
-          method == 'notify_klippy_disconnected') {
-        _printerSubject.add(current.copyWith(
-          klippyReady: false,
-          klippyState: method == 'notify_klippy_shutdown'
-              ? 'shutdown'
-              : 'disconnected',
-        ));
       }
-    } catch (e) {
-      appLogger.warning('PrinterService[$machineId]: parse error: $e');
+    } else if (method == 'notify_klippy_ready') {
+      _printerSubject.add(current.copyWith(
+        klippyReady: true,
+        klippyState: 'ready',
+      ));
+    } else if (method == 'notify_klippy_shutdown' ||
+        method == 'notify_klippy_disconnected') {
+      _printerSubject.add(current.copyWith(
+        klippyReady: false,
+        klippyState: method == 'notify_klippy_shutdown'
+            ? 'shutdown'
+            : 'disconnected',
+      ));
+    }
+  }
+
+  /// Completes every pending RPC request with [error] and clears the map.
+  ///
+  /// Called when a WebSocket message cannot be decoded, so callers are not
+  /// left waiting for the full 10 s [_call] timeout.
+  void _failPendingRequests(Object error) {
+    if (_pendingRequests.isEmpty) return;
+    final toFail = Map.of(_pendingRequests);
+    _pendingRequests.clear();
+    final exception =
+        error is Exception ? error : Exception('parse error: $error');
+    for (final completer in toFail.values) {
+      if (!completer.isCompleted) completer.completeError(exception);
     }
   }
 

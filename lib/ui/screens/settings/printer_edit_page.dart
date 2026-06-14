@@ -12,9 +12,11 @@ import '../../../data/model/machine.dart';
 import '../../../data/model/vpn_config.dart';
 import '../../../routing/app_router.dart';
 import '../../../service/machine_service.dart';
+import '../../../service/network_scanner_service.dart';
 import '../../../service/network_service.dart';
 import '../../../util/app_constants.dart';
 import '../../../util/logger.dart';
+import '../../../util/url_utils.dart';
 
 class PrinterEditPage extends ConsumerStatefulWidget {
   const PrinterEditPage({super.key, this.machineId});
@@ -62,7 +64,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
 
   void _handleHttpUrlChanged() {
     if (_wsManuallyEdited) return;
-    final derived = _deriveWsUrl(_httpUrlController.text.trim());
+    final derived = _deriveWsUrl(coerceHttpUrl(_httpUrlController.text.trim()));
     if (_wsUrlController.text.trim() == derived) return;
     _syncingWs = true;
     _wsUrlController.text = derived;
@@ -74,8 +76,8 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
 
   void _handleWsUrlChanged() {
     if (_syncingWs) return;
-    _wsManuallyEdited =
-        _wsUrlController.text.trim() != _deriveWsUrl(_httpUrlController.text.trim());
+    _wsManuallyEdited = _wsUrlController.text.trim() !=
+        _deriveWsUrl(coerceHttpUrl(_httpUrlController.text.trim()));
   }
 
   bool _ensureLoaded(MachineService machineService) {
@@ -109,7 +111,8 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     setState(() => _saving = true);
     try {
       final displayName = _displayNameController.text.trim();
-      final httpUrl = _httpUrlController.text.trim();
+      // Auto-prefix http:// so users can type bare IPs like 192.168.1.100.
+      final httpUrl = coerceHttpUrl(_httpUrlController.text.trim());
       final apiKey = _emptyToNull(_apiKeyController.text);
       final webcamUrl = _emptyToNull(_webcamUrlController.text);
       final port = _extractPort(httpUrl);
@@ -178,8 +181,9 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
   }
 
   Future<void> _testConnection() async {
-    final httpUrl = _httpUrlController.text.trim();
-    final urlError = _validateHttpUrl(httpUrl);
+    final rawUrl = _httpUrlController.text.trim();
+    final coerced = coerceHttpUrl(rawUrl);
+    final urlError = _validateHttpUrl(coerced);
     if (urlError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -193,8 +197,8 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     setState(() => _testingConnection = true);
     try {
       final normalisedHttpUrl = _normaliseHttpUrl(
-        httpUrl,
-        _extractPort(httpUrl),
+        coerced,
+        _extractPort(coerced),
       );
       final reachable =
           await ref.read(networkServiceProvider).isReachable(normalisedHttpUrl);
@@ -265,6 +269,28 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     }
   }
 
+  /// Opens a bottom sheet that scans the local network for Moonraker instances.
+  /// When the user taps a discovered printer the form fields are pre-filled.
+  Future<void> _scanNetwork() async {
+    final discovered = await showModalBottomSheet<DiscoveredPrinter>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _NetworkScanSheet(
+        scannerService: ref.read(networkScannerServiceProvider),
+      ),
+    );
+    if (discovered == null || !mounted) return;
+
+    _httpUrlController.text = discovered.httpUrl;
+    if (_displayNameController.text.trim().isEmpty) {
+      _displayNameController.text = discovered.displayName;
+    }
+    // Rebuild so the WS field updates via the listener.
+    setState(() {});
+  }
+
+  // ── URL helpers ───────────────────────────────────────────────────────────
+
   int _extractPort(String httpUrl) {
     final uri = Uri.tryParse(httpUrl);
     if (uri != null && uri.hasPort) return uri.port;
@@ -289,18 +315,23 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     return '$base$portSuffix';
   }
 
+  /// Validates a URL that has already been coerced (has a scheme).
   String? _validateHttpUrl(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'HTTP URL is required.';
     final uri = Uri.tryParse(text);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      return 'Enter a valid HTTP URL.';
+      return 'Enter a valid address (e.g. 192.168.1.100 or http://192.168.1.100).';
     }
     if (uri.scheme != 'http' && uri.scheme != 'https') {
       return 'URL must start with http:// or https://';
     }
     return null;
   }
+
+  /// Validator used by the form field – coerces the raw input first.
+  String? _validateHttpUrlField(String? value) =>
+      _validateHttpUrl(coerceHttpUrl(value ?? ''));
 
   String? _validateWsUrl(String? value) {
     final text = value?.trim() ?? '';
@@ -318,7 +349,8 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
   String? _validateOptionalHttpUrl(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
-    final uri = Uri.tryParse(text);
+    final coerced = coerceHttpUrl(text);
+    final uri = Uri.tryParse(coerced);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
       return 'Enter a valid URL.';
     }
@@ -367,19 +399,33 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
                 border: OutlineInputBorder(),
               ),
               validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? 'Display name is required.' : null,
+                  (value == null || value.trim().isEmpty)
+                      ? 'Display name is required.'
+                      : null,
             ),
             const Gap(16),
             TextFormField(
               controller: _httpUrlController,
               decoration: const InputDecoration(
-                labelText: 'HTTP URL e.g. http://192.168.1.100',
+                labelText: 'Printer address',
+                hintText: '192.168.1.100  or  http://192.168.1.100:7125',
+                helperText: 'IP address or hostname – http:// is added automatically',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
-              validator: _validateHttpUrl,
+              validator: _validateHttpUrlField,
             ),
-            const Gap(16),
+            const Gap(8),
+            if (!isEditing) ...[
+              // Scan button – only shown on the Add screen (no machine saved yet).
+              OutlinedButton.icon(
+                onPressed:
+                    (_saving || _testingConnection) ? null : _scanNetwork,
+                icon: const Icon(Icons.wifi_find_outlined),
+                label: const Text('Scan for Printers on Local Network'),
+              ),
+              const Gap(16),
+            ],
             TextFormField(
               controller: _wsUrlController,
               decoration: const InputDecoration(
@@ -401,7 +447,9 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
                     _apiKeyObscured = !_apiKeyObscured;
                   }),
                   icon: Icon(
-                    _apiKeyObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    _apiKeyObscured
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                   ),
                 ),
               ),
@@ -441,7 +489,9 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
             ),
             const Gap(24),
             FilledButton.icon(
-              onPressed: _saving ? null : () => _persistMachine(popAfterSave: true),
+              onPressed: _saving
+                  ? null
+                  : () => _persistMachine(popAfterSave: true),
               icon: _saving
                   ? const SizedBox(
                       width: 18,
@@ -468,6 +518,170 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Network scan bottom sheet ─────────────────────────────────────────────────
+
+class _NetworkScanSheet extends StatefulWidget {
+  const _NetworkScanSheet({required this.scannerService});
+
+  final NetworkScannerService scannerService;
+
+  @override
+  State<_NetworkScanSheet> createState() => _NetworkScanSheetState();
+}
+
+class _NetworkScanSheetState extends State<_NetworkScanSheet> {
+  List<DiscoveredPrinter> _results = [];
+  bool _scanning = false;
+  bool _done = false;
+  bool _cancelled = false;
+  int _found = 0;
+  int _probed = 0;
+  static const int _total = 254;
+
+  @override
+  void initState() {
+    super.initState();
+    _startScan();
+  }
+
+  Future<void> _startScan() async {
+    setState(() {
+      _scanning = true;
+      _done = false;
+      _results = [];
+      _found = 0;
+      _probed = 0;
+      _cancelled = false;
+    });
+
+    final results = await widget.scannerService.scanLocalNetwork(
+      onProgress: (found, probed, total) {
+        if (mounted) setState(() { _found = found; _probed = probed; });
+      },
+      isCancelled: () => _cancelled,
+    );
+
+    if (mounted) {
+      setState(() {
+        _results = results;
+        _scanning = false;
+        _done = true;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelled = true;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.wifi_find_outlined),
+                  const Gap(8),
+                  Expanded(
+                    child: Text(
+                      'Scanning Local Network…',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (_scanning)
+                    TextButton(
+                      onPressed: () => setState(() => _cancelled = true),
+                      child: const Text('Cancel'),
+                    ),
+                  if (_done)
+                    TextButton.icon(
+                      onPressed: _startScan,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Rescan'),
+                    ),
+                ],
+              ),
+              const Gap(8),
+              if (_scanning) ...[
+                LinearProgressIndicator(
+                  value: _probed / _total,
+                ),
+                const Gap(4),
+                Text(
+                  'Probed $_probed / $_total hosts — $_found found',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const Gap(8),
+              ],
+              if (_done && _results.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.search_off_outlined, size: 48),
+                      const Gap(8),
+                      Text(
+                        'No Moonraker printers found on this network.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const Gap(4),
+                      Text(
+                        'Make sure your phone is on the same Wi-Fi network as the printer.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  itemCount: _results.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final printer = _results[index];
+                    return ListTile(
+                      leading: const Icon(Icons.print_outlined),
+                      title: Text(printer.displayName),
+                      subtitle: Text(printer.httpUrl),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).pop(printer),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
