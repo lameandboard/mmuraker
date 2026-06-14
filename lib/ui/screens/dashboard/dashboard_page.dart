@@ -15,11 +15,18 @@ import '../../../service/machine_service.dart';
 import '../../../service/moonraker/printer_service.dart';
 import '../../../service/vpn_service.dart';
 import '../../components/common_widgets.dart';
-import '../../components/error_card.dart';
+import 'components/afc_card.dart';
+import 'components/bed_mesh_card.dart';
+import 'components/happy_hare_card.dart';
+import 'components/motion_systems_card.dart';
 import 'components/printer_status_card.dart';
-import 'components/temperature_card.dart';
 import 'components/control_extruder_card.dart';
 import 'components/mmu_card.dart';
+import 'components/sensor_overview_card.dart';
+import 'components/speed_flow_card.dart';
+import 'components/temperature_card.dart';
+import 'components/webcam_card.dart';
+import 'components/zoffset_card.dart';
 
 /// Main dashboard for a single printer.
 ///
@@ -35,8 +42,8 @@ class DashboardPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final machineService = ref.watch(machineServiceProvider);
-    final machines = machineService.machines;
-    final machine = machineService.findById(machineId);
+    final machines = ref.watch(machineListProvider).valueOrNull ?? machineService.machines;
+    final machine = _findMachine(machines, machineId) ?? machineService.findById(machineId);
 
     // Connect on first build, disconnect on dispose.
     // IMPORTANT: capture every service reference *before* returning the
@@ -64,7 +71,11 @@ class DashboardPage extends HookConsumerWidget {
     if (machine == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Dashboard')),
-        body: const Center(child: Text('Printer not found.')),
+        body: Center(
+          child: Text(
+            machines.isEmpty ? 'Loading printer…' : 'Printer not found.',
+          ),
+        ),
       );
     }
 
@@ -76,6 +87,28 @@ class DashboardPage extends HookConsumerWidget {
       initialData: printerService.current,
       builder: (context, snapshot) {
         final printer = snapshot.data ?? const Printer();
+        final availableObjects = printer.availableObjects;
+        final gcodeMove = printerService.objectData('gcode_move');
+        final bedMesh = printerService.objectData('bed_mesh');
+        final probe = printerService.objectData('probe') ??
+            printerService.objectData('bltouch');
+        final zTilt = printerService.objectData('z_tilt');
+        final quadGantry = printerService.objectData('quad_gantry_level');
+        final thermalSensors = printerService.thermalSensors;
+        final binarySensors = printerService.binarySensors;
+        final afcState = printerService.afcState;
+        final happyHareState = printerService.happyHareState;
+        final effectiveWebcamUrl =
+            machine.webcamUrl ?? printerService.detectedWebcamUrl;
+        double? zOffset;
+        final homingOrigin = gcodeMove?['homing_origin'];
+        if (homingOrigin is List && homingOrigin.length > 2) {
+          final rawZ = homingOrigin[2];
+          if (rawZ is num) {
+            zOffset = rawZ.toDouble();
+          }
+        }
+
         return Scaffold(
           appBar: AppBar(
             title: Text(machine.name),
@@ -92,6 +125,12 @@ class DashboardPage extends HookConsumerWidget {
                 tooltip: 'G-code Console',
                 onPressed: () =>
                     context.push('/dashboard/$machineId/console'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.inventory_2_outlined),
+                tooltip: 'Spoolman',
+                onPressed: () =>
+                    context.push('/dashboard/$machineId/spoolman'),
               ),
               IconButton(
                 icon: const Icon(Icons.emergency_outlined),
@@ -116,6 +155,14 @@ class DashboardPage extends HookConsumerWidget {
               children: [
                 PrinterStatusCard(printer: printer),
                 const Gap(8),
+                WebcamCard(
+                  machine: machine,
+                  webcamUrl: effectiveWebcamUrl,
+                  isAutodetected:
+                      machine.webcamUrl == null &&
+                      printerService.detectedWebcamUrl != null,
+                ),
+                const Gap(8),
                 TemperatureCard(
                   printer: printer,
                   onSetExtruderTemp: (idx, temp) =>
@@ -123,11 +170,56 @@ class DashboardPage extends HookConsumerWidget {
                   onSetBedTemp: (temp) => printerService.setBedTemp(temp),
                 ),
                 const Gap(8),
+                MotionSystemsCard(
+                  printer: printer,
+                  printerService: printerService,
+                  availableObjects: availableObjects,
+                  bedMesh: bedMesh,
+                  probe: probe,
+                  quadGantryLevel: quadGantry,
+                  zTilt: zTilt,
+                ),
+                if (bedMesh != null || availableObjects.contains('bed_mesh')) ...[
+                  const Gap(8),
+                  BedMeshCard(
+                    printerService: printerService,
+                    bedMesh: bedMesh,
+                  ),
+                ],
+                if (zOffset != null || probe != null) ...[
+                  const Gap(8),
+                  ZOffsetCard(
+                    printerService: printerService,
+                    zOffset: zOffset,
+                    printState: printer.printState,
+                    hasProbe: probe != null,
+                  ),
+                ],
+                if (thermalSensors.isNotEmpty || binarySensors.isNotEmpty) ...[
+                  const Gap(8),
+                  SensorOverviewCard(
+                    thermalSensors: thermalSensors,
+                    binarySensors: binarySensors,
+                  ),
+                ],
                 ControlExtruderCard(
                   printer: printer,
                   printerService: printerService,
                 ),
-                if (printer.hasMmu) ...[
+                const Gap(8),
+                SpeedFlowCard(
+                  printerService: printerService,
+                  printState: printer.printState,
+                  speedFactor: printer.toolhead.speedFactor,
+                  extrudeFactor: printer.toolhead.extrudeFactor,
+                ),
+                if (afcState != null) ...[
+                  const Gap(8),
+                  AfcCard(machineId: machineId, state: afcState),
+                ] else if (happyHareState != null) ...[
+                  const Gap(8),
+                  HappyHareCard(machineId: machineId, state: happyHareState),
+                ] else if (printer.hasMmu) ...[
                   const Gap(8),
                   MmuCard(
                     printer: printer,
@@ -145,6 +237,13 @@ class DashboardPage extends HookConsumerWidget {
         );
       },
     );
+  }
+
+  Machine? _findMachine(List<Machine> machines, String id) {
+    for (final machine in machines) {
+      if (machine.id == id) return machine;
+    }
+    return null;
   }
 
   Future<void> _confirmEmergencyStop(

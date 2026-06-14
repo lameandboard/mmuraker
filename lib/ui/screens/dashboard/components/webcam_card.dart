@@ -14,13 +14,20 @@ import 'package:mmuraker/data/model/machine.dart';
 import 'package:mmuraker/ui/components/common_widgets.dart';
 
 class WebcamCard extends HookConsumerWidget {
-  const WebcamCard({super.key, required this.machine});
+  const WebcamCard({
+    super.key,
+    required this.machine,
+    this.webcamUrl,
+    this.isAutodetected = false,
+  });
 
   final Machine machine;
+  final String? webcamUrl;
+  final bool isAutodetected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final webcamUrl = machine.safeWebcamUrl;
+    final webcamUrl = this.webcamUrl ?? machine.safeWebcamUrl;
     final refreshTick = useState(DateTime.now().millisecondsSinceEpoch);
 
     useEffect(() {
@@ -49,6 +56,11 @@ class WebcamCard extends HookConsumerWidget {
               children: [
                 const SectionHeader('Webcam'),
                 const Spacer(),
+                if (resolvedUrl != null && isAutodetected)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Chip(label: Text('Auto-detected')),
+                  ),
                 if (resolvedUrl != null)
                   IconButton(
                     tooltip: 'Refresh webcam',

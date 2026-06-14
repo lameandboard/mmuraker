@@ -84,6 +84,7 @@ class AfcCard extends ConsumerWidget {
               spoolById: spoolById,
               onLoad: (lane) => svc.sendGcode('AFC_LOAD LANE=$lane'),
               onUnload: (lane) => svc.sendGcode('AFC_UNLOAD LANE=$lane'),
+              onEject: (lane) => svc.sendGcode('AFC_EJECT LANE=$lane'),
             ),
           )
         else
@@ -187,11 +188,13 @@ class _LaneGrid extends StatelessWidget {
     required this.spoolById,
     required this.onLoad,
     required this.onUnload,
+    required this.onEject,
   });
   final AfcState state;
   final Map<int, SpoolmanSpool> spoolById;
   final void Function(String lane) onLoad;
   final void Function(String lane) onUnload;
+  final void Function(String lane) onEject;
 
   @override
   Widget build(BuildContext context) {
@@ -212,6 +215,7 @@ class _LaneGrid extends StatelessWidget {
           spool: spool,
           onLoad: () => onLoad(name),
           onUnload: () => onUnload(name),
+          onEject: () => onEject(name),
         );
       }).toList(),
     );
@@ -225,6 +229,7 @@ class _LaneTile extends StatelessWidget {
     required this.isActive,
     required this.onLoad,
     required this.onUnload,
+    required this.onEject,
     this.spool,
   });
   final String name;
@@ -232,6 +237,7 @@ class _LaneTile extends StatelessWidget {
   final bool isActive;
   final VoidCallback onLoad;
   final VoidCallback onUnload;
+  final VoidCallback onEject;
   /// Spoolman spool linked to this lane, if available.
   final SpoolmanSpool? spool;
 
@@ -421,10 +427,20 @@ class _LaneTile extends StatelessWidget {
                   onTap: onLoad,
                 )
               else
-                _SmallButton(
-                  icon: Icons.arrow_upward,
-                  tooltip: 'Unload',
-                  onTap: onUnload,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _SmallButton(
+                      icon: Icons.arrow_upward,
+                      tooltip: 'Unload',
+                      onTap: onUnload,
+                    ),
+                    _SmallButton(
+                      icon: Icons.eject_outlined,
+                      tooltip: 'Eject',
+                      onTap: onEject,
+                    ),
+                  ],
                 ),
             ],
           ],

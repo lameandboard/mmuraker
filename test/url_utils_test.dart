@@ -53,4 +53,28 @@ void main() {
       expect(coerceHttpUrl('   '), '');
     });
   });
+
+  group('extractMoonrakerWebcamUrl', () {
+    test('resolves relative stream urls from webcam list responses', () {
+      final url = extractMoonrakerWebcamUrl('http://printer.local:7125', {
+        'webcams': [
+          {'stream_url': '/webcam/?action=stream'},
+        ],
+      });
+
+      expect(url, 'http://printer.local:7125/webcam/?action=stream');
+    });
+
+    test('supports database-style webcam payloads', () {
+      final url = extractMoonrakerWebcamUrl('http://192.168.1.50:7125', {
+        'result': {
+          'value': {
+            'cam1': {'snapshotUrl': '/webcam/?action=snapshot'},
+          },
+        },
+      });
+
+      expect(url, 'http://192.168.1.50:7125/webcam/?action=snapshot');
+    });
+  });
 }

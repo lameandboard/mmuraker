@@ -10,6 +10,8 @@ import 'package:gap/gap.dart';
 import '../../../../data/dto/machine/printer.dart';
 import '../../../components/common_widgets.dart';
 
+enum _TempDialogResult { cancel, off, set }
+
 /// Temperature card — shows extruder(s) and bed temps with target-set controls.
 class TemperatureCard extends StatelessWidget {
   const TemperatureCard({
@@ -90,7 +92,7 @@ class TemperatureCard extends StatelessWidget {
     final controller = TextEditingController(
       text: current > 0 ? current.toStringAsFixed(0) : '',
     );
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<_TempDialogResult>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Set $label Temperature'),
@@ -106,26 +108,39 @@ class TemperatureCard extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, _TempDialogResult.cancel),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              onSet(0);
-              Navigator.pop(ctx, true);
-            },
+            onPressed: () => Navigator.pop(ctx, _TempDialogResult.off),
             child: const Text('Off'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(ctx, _TempDialogResult.set),
             child: const Text('Set'),
           ),
         ],
       ),
     );
-    if (confirmed == true && controller.text.isNotEmpty) {
-      onSet(double.tryParse(controller.text) ?? 0);
+    if (!context.mounted) {
+      controller.dispose();
+      return;
     }
+
+    switch (result) {
+      case _TempDialogResult.off:
+        onSet(0);
+        break;
+      case _TempDialogResult.set:
+        if (controller.text.isNotEmpty) {
+          onSet(double.tryParse(controller.text) ?? 0);
+        }
+        break;
+      case _TempDialogResult.cancel:
+      case null:
+        break;
+    }
+
     controller.dispose();
   }
 }
