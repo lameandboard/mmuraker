@@ -18,6 +18,12 @@ part 'machine_service.g.dart';
 @riverpod
 MachineService machineService(Ref ref) => MachineService(ref);
 
+final machineListProvider = StreamProvider<List<Machine>>((ref) async* {
+  final service = ref.watch(machineServiceProvider);
+  await service.ready;
+  yield* service.watchMachines();
+});
+
 /// Manages the list of configured Klipper/Moonraker printers.
 ///
 /// Machines are persisted in a Hive box so they survive app restarts.
@@ -33,6 +39,8 @@ class MachineService {
   Box<Machine>? _box;
 
   static const _uuid = Uuid();
+
+  Future<void> get ready => _initFuture;
 
   Future<void> _init() async {
     if (!Hive.isAdapterRegistered(AppConstants.machineAdapterId)) {
@@ -50,6 +58,19 @@ class MachineService {
 
   /// All saved machines.
   List<Machine> get machines => _box?.values.toList() ?? const [];
+
+  /// Emits the current machine list whenever the underlying Hive box changes.
+  Stream<List<Machine>> watchMachines() async* {
+    await _initFuture;
+    final box = _box;
+    if (box == null) {
+      yield const [];
+      return;
+    }
+
+    yield box.values.toList(growable: false);
+    yield* box.watch().map((_) => box.values.toList(growable: false));
+  }
 
   /// Find a machine by its [id].
   Machine? findById(String id) =>

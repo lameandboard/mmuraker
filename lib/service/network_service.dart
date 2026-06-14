@@ -4,6 +4,7 @@
 // See LICENSE and NOTICE for full attribution and terms.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../util/app_constants.dart';
 import '../util/logger.dart';
+import '../util/url_utils.dart';
 
 part 'network_service.g.dart';
 
@@ -81,6 +83,49 @@ class NetworkService {
     } catch (_) {
       return false;
     }
+  }
+
+  Future<String?> discoverWebcamUrl(String httpUrl, {String? apiKey}) async {
+    final baseUrl = httpUrl.replaceAll(RegExp(r'/$'), '');
+    final headers = <String, String>{
+      if (apiKey != null && apiKey.isNotEmpty) 'X-Api-Key': apiKey,
+    };
+
+    for (final endpoint in const [
+      '/server/webcams/list',
+      '/server/database/item?namespace=webcams',
+    ]) {
+      try {
+        final response = await http
+            .get(Uri.parse('$baseUrl$endpoint'), headers: headers)
+            .timeout(AppConstants.localReachabilityTimeout);
+        if (response.statusCode < 200 || response.statusCode >= 300) continue;
+        final payload = jsonDecode(response.body);
+        final webcamUrl = extractMoonrakerWebcamUrl(baseUrl, payload);
+        if (webcamUrl != null) return webcamUrl;
+      } catch (_) {
+        // Best-effort discovery only.
+      }
+    }
+
+    for (final relativePath in const [
+      '/webcam/?action=stream',
+      '/webcam?action=stream',
+      '/webcam/stream',
+      '/camera/?action=stream',
+    ]) {
+      final candidate = '$baseUrl$relativePath';
+      try {
+        final response = await http
+            .head(Uri.parse(candidate), headers: headers)
+            .timeout(AppConstants.localReachabilityTimeout);
+        if (response.statusCode < 400) return candidate;
+      } catch (_) {
+        // Ignore fallback probe failures.
+      }
+    }
+
+    return null;
   }
 
   Future<void> _check(String httpUrl) async {

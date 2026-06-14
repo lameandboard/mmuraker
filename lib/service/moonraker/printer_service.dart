@@ -11,8 +11,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../data/dto/machine/mmu/afc_state.dart';
+import '../../data/dto/machine/mmu/happy_hare_state.dart';
 import '../../data/dto/machine/mmu/mmu_state.dart';
 import '../../data/dto/machine/printer.dart';
+import '../../util/url_utils.dart';
 import '../../util/logger.dart';
 
 part 'printer_service.g.dart';
@@ -41,10 +44,46 @@ class PrinterService {
   WebSocketChannel? _channel;
   StreamSubscription? _wsSub;
   int _msgId = 1;
+  String? _httpBaseUrl;
 
   final _printerSubject = BehaviorSubject<Printer>.seeded(const Printer());
   Stream<Printer> get printerStream => _printerSubject.stream;
   Printer get current => _printerSubject.value;
+  final _objectState = <String, Object?>{};
+  String? _detectedWebcamUrl;
+
+  String? get detectedWebcamUrl => _detectedWebcamUrl;
+  Map<String, dynamic>? objectData(String key) => _asMap(_objectState[key]);
+  Object? objectValue(String key) => _objectState[key];
+
+  List<MapEntry<String, Map<String, dynamic>>> get thermalSensors {
+    final sensors = <MapEntry<String, Map<String, dynamic>>>[];
+    for (final entry in _objectState.entries) {
+      if (!_isThermalObjectKey(entry.key)) continue;
+      final value = _asMap(entry.value);
+      if (value != null) {
+        sensors.add(MapEntry(entry.key, value));
+      }
+    }
+    return sensors;
+  }
+
+  List<MapEntry<String, Object?>> get binarySensors => _objectState.entries
+      .where((entry) => _isBinarySensorObjectKey(entry.key))
+      .toList(growable: false);
+
+  AfcState? get afcState {
+    if (_objectState.keys.every((key) => key != 'AFC' && !key.startsWith('AFC_'))) {
+      return null;
+    }
+    return AfcState.fromMoonrakerJson(Map<String, dynamic>.from(_objectState));
+  }
+
+  HappyHareState? get happyHareState {
+    final mmu = _objectState['mmu'];
+    if (mmu == null) return null;
+    return HappyHareState.fromMoonrakerJson({'mmu': mmu});
+  }
 
   final _pendingRequests = <int, Completer<dynamic>>{};
 
@@ -52,15 +91,20 @@ class PrinterService {
   Future<void> connect(String wsUrl, {String? apiKey}) async {
     await disconnect();
     appLogger.info('PrinterService[$machineId]: connecting to $wsUrl');
-
-    final headers = <String, dynamic>{};
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-Api-Key'] = apiKey;
-    }
+    _httpBaseUrl = _deriveHttpBaseUrl(wsUrl);
+    _objectState.clear();
+    _detectedWebcamUrl = null;
 
     try {
+      final uri = () {
+        if (apiKey == null || apiKey.isEmpty) return Uri.parse(wsUrl);
+        final parsed = Uri.parse(wsUrl);
+        return parsed.replace(
+          queryParameters: {...parsed.queryParameters, 'token': apiKey},
+        );
+      }();
       _channel = WebSocketChannel.connect(
-        Uri.parse(wsUrl),
+        uri,
         protocols: const ['moonraker'],
       );
       _wsSub = _channel!.stream.listen(
@@ -79,6 +123,8 @@ class PrinterService {
     await _channel?.sink.close();
     _channel = null;
     _wsSub = null;
+    _objectState.clear();
+    _detectedWebcamUrl = null;
   }
 
   // ── Public control API (all features free) ────────────────────────────────
@@ -99,6 +145,9 @@ class PrinterService {
   /// Select an MMU tool by index (sends T0, T1, … G-code).
   Future<void> selectMmuTool(int toolIndex) =>
       sendGcode('T$toolIndex');
+
+  /// Alias used by some dashboard widgets.
+  Future<void> changeTool(int toolIndex) => selectMmuTool(toolIndex);
 
   /// Call a named G-code macro with optional parameters.
   Future<void> runMacro(String macroName, [Map<String, String>? params]) {
@@ -163,6 +212,7 @@ class PrinterService {
         'objects': subscribeObjects,
       }) as Map<String, dynamic>;
       final status = queryResult['status'] as Map<String, dynamic>? ?? {};
+      _replaceObjectState(status);
       printer = _buildPrinter(
         status: status,
         availableObjects: objects,
@@ -195,6 +245,7 @@ class PrinterService {
       await _call('printer.objects.subscribe', {
         'objects': subscribeObjects,
       });
+      unawaited(_discoverWebcamUrl());
     } catch (e) {
       appLogger.warning(
         'PrinterService[$machineId]: subscribe call failed ($e) '
@@ -237,18 +288,160 @@ class PrinterService {
     String? mmuObjectKey,
   ) {
     final sub = <String, dynamic>{
-      'toolhead': null,
-      'extruder': null,
-      'heater_bed': null,
-      'print_stats': null,
-      'display_status': null,
+      'toolhead': const ['extruder', 'position', 'homed_axes', 'max_velocity'],
+      'gcode_move': const [
+        'speed_factor',
+        'extrude_factor',
+        'homing_origin',
+        'gcode_position',
+      ],
+      'extruder': const [
+        'temperature',
+        'target',
+        'power',
+        'can_extrude',
+        'pressure_advance',
+        'smooth_time',
+      ],
+      'heater_bed': const ['temperature', 'target', 'power'],
+      'print_stats': const [
+        'state',
+        'filename',
+        'message',
+        'info',
+        'progress',
+        'print_duration',
+      ],
+      'display_status': const ['progress', 'message'],
     };
     // Add extra extruders if present.
     for (int i = 1; i <= 8; i++) {
-      if (objects.contains('extruder$i')) sub['extruder$i'] = null;
+      if (objects.contains('extruder$i')) {
+        sub['extruder$i'] = const [
+          'temperature',
+          'target',
+          'power',
+          'can_extrude',
+          'pressure_advance',
+          'smooth_time',
+        ];
+      }
     }
-    // Subscribe to MMU object if found.
-    if (mmuObjectKey != null) sub[mmuObjectKey] = null;
+
+    for (final object in objects) {
+      if (_isThermalObjectKey(object)) {
+        sub[object] = const ['temperature', 'target', 'power'];
+      } else if (_isBinarySensorObjectKey(object)) {
+        sub[object] = const [
+          'filament_detected',
+          'enabled',
+          'state',
+          'detected',
+          'triggered',
+        ];
+      }
+    }
+
+    _addObjectIfPresent(sub, objects, 'bed_mesh', const [
+      'profile_name',
+      'mesh_matrix',
+      'probed_matrix',
+    ]);
+    _addObjectIfPresent(sub, objects, 'probe', const ['last_z_result']);
+    _addObjectIfPresent(sub, objects, 'bltouch', const ['mode']);
+    _addObjectIfPresent(sub, objects, 'z_tilt', const ['applied']);
+    _addObjectIfPresent(sub, objects, 'quad_gantry_level', const ['applied']);
+    _addObjectIfPresent(sub, objects, 'screws_tilt_adjust', const ['results']);
+    _addObjectIfPresent(sub, objects, 'fan', const ['speed']);
+
+    for (final object in objects.where((value) => value.startsWith('AFC_'))) {
+      if (object.startsWith('AFC_lane ')) {
+        sub[object] = const [
+          'lane_name',
+          'name',
+          'state',
+          'status',
+          'filament_present',
+          'loaded',
+          'has_filament',
+          'extruder_present',
+          'tool_loaded',
+          'at_extruder',
+          'material',
+          'color',
+          'colour',
+          'spool_id',
+          'remaining_mm',
+        ];
+      } else if (object == 'AFC_hub' || object.startsWith('AFC_extruder ')) {
+        sub[object] = const [
+          'filament_present',
+          'loaded',
+          'has_filament',
+          'state',
+          'status',
+        ];
+      } else if (object == 'AFC_buffer') {
+        sub[object] = const ['state', 'status'];
+      } else {
+        sub[object] = null;
+      }
+    }
+    if (objects.contains('AFC')) {
+      sub['AFC'] = const [
+        'status',
+        'state',
+        'lanes',
+        'hub',
+        'buffer',
+        'active_lane',
+        'current_lane',
+        'lane',
+        'last_error',
+        'error',
+      ];
+    }
+
+    if (mmuObjectKey != null) {
+      sub[mmuObjectKey] = const [
+        'tool',
+        'current_tool',
+        'selected_tool',
+        'tool_selected',
+        'num_gates',
+        'tool_count',
+        'is_homed',
+        'state',
+        'print_state',
+        'last_error',
+        'error',
+        'slicer_colors',
+        'gates',
+        'gate_status',
+        'gate_states',
+        'gate_statuses',
+        'is_paused',
+        'paused',
+        'is_bypass',
+        'bypass',
+        'endless_spool',
+        'endless_spool_enabled',
+        'endless_spool_groups',
+        'servo_state',
+        'servo',
+        'filament_position',
+        'filament_pos',
+        'filament_state',
+        'filament_remaining',
+        'remaining_grams',
+        'spoolman_remaining',
+        'is_printing',
+        'printing',
+        'print_stats',
+        'mmu_print_stats',
+        'statistics',
+      ];
+    }
     return sub;
   }
 
@@ -262,16 +455,27 @@ class PrinterService {
     String? mmuObjectKey,
   }) {
     final toolheadData = status['toolhead'] as Map<String, dynamic>? ?? {};
+    final gcodeMoveData = status['gcode_move'] as Map<String, dynamic>? ?? {};
     final printStatsData = status['print_stats'] as Map<String, dynamic>? ?? {};
+    final displayStatusData =
+        status['display_status'] as Map<String, dynamic>? ?? {};
     final bedData = status['heater_bed'] as Map<String, dynamic>? ?? {};
+    final homedAxes =
+        (toolheadData['homed_axes'] as String? ?? '').toLowerCase();
+    final position = _parsePosition(
+      toolheadData['position'] as List?,
+      gcodeMoveData['gcode_position'] as List?,
+    );
 
     final toolhead = Toolhead(
       activeExtruder: toolheadData['extruder'] as String? ?? 'extruder',
-      position: (toolheadData['position'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [0, 0, 0, 0],
+      position: position,
+      homedX: homedAxes.contains('x'),
+      homedY: homedAxes.contains('y'),
+      homedZ: homedAxes.contains('z'),
       printSpeed: (toolheadData['max_velocity'] as num?)?.toDouble() ?? 0,
+      speedFactor: _normalizeFactor(gcodeMoveData['speed_factor']),
+      extrudeFactor: _normalizeFactor(gcodeMoveData['extrude_factor']),
     );
 
     final extruders = _parseExtruders(status);
@@ -298,7 +502,9 @@ class PrinterService {
       toolhead: toolhead,
       extruders: extruders,
       printState: printStatsData['state'] as String? ?? 'idle',
-      printProgress: (printStatsData['progress'] as num?)?.toDouble() ?? 0,
+      printProgress: (printStatsData['progress'] as num?)?.toDouble() ??
+          (displayStatusData['progress'] as num?)?.toDouble() ??
+          0,
       heatedBed: heatedBed,
       mmuState: mmuState,
       hasMmu: hasMmu,
@@ -432,48 +638,20 @@ class PrinterService {
   }
 
   void _applyDelta(Map<String, dynamic> delta) {
-    var printer = current;
-
-    if (delta.containsKey('toolhead')) {
-      final th = delta['toolhead'] as Map<String, dynamic>;
-      printer = printer.copyWith(
-        toolhead: printer.toolhead.copyWith(
-          activeExtruder:
-              th['extruder'] as String? ?? printer.toolhead.activeExtruder,
-          printSpeed: (th['max_velocity'] as num?)?.toDouble() ??
-              printer.toolhead.printSpeed,
-        ),
-      );
-    }
-
-    if (delta.containsKey('print_stats')) {
-      final ps = delta['print_stats'] as Map<String, dynamic>;
-      printer = printer.copyWith(
-        printState: ps['state'] as String? ?? printer.printState,
-        printProgress: (ps['progress'] as num?)?.toDouble() ??
-            printer.printProgress,
-      );
-    }
-
-    // MMU delta.
-    final mmuKey = printer.mmuState?.objectKey;
-    if (mmuKey != null && delta.containsKey(mmuKey)) {
-      final mmuDelta = delta[mmuKey] as Map<String, dynamic>;
-      final existing = printer.mmuState!;
-      printer = printer.copyWith(
-        mmuState: existing.copyWith(
-          activeTool: (mmuDelta['tool'] as num?)?.toInt() ??
-              (mmuDelta['current_tool'] as num?)?.toInt() ??
-              existing.activeTool,
-          printState: mmuDelta['print_state'] as String? ?? existing.printState,
-          error: mmuDelta['last_error'] as String? ?? existing.error,
-          busy: mmuDelta['print_state'] == 'loading' ||
-              mmuDelta['print_state'] == 'unloading',
-        ),
-      );
-    }
-
-    _printerSubject.add(printer);
+    _mergeObjectState(delta);
+    final existing = current;
+    final rebuilt = _buildPrinter(
+      status: _mapStatusSnapshot(),
+      availableObjects: existing.availableObjects,
+      availableMacros: existing.availableMacros,
+      hasMmu: existing.hasMmu,
+      mmuObjectKey: existing.mmuState?.objectKey ?? _findMmuObjectKey(existing.availableObjects),
+    ).copyWith(
+      klippyReady: existing.klippyReady,
+      klippyState: existing.klippyState,
+      klippyStateMessage: existing.klippyStateMessage,
+    );
+    _printerSubject.add(rebuilt);
   }
 
   void _onError(Object error) {
@@ -518,5 +696,116 @@ class PrinterService {
         throw TimeoutException('Moonraker call timed out: $method');
       },
     );
+  }
+
+  Future<void> _discoverWebcamUrl() async {
+    final baseUrl = _httpBaseUrl;
+    if (baseUrl == null || _detectedWebcamUrl != null) return;
+
+    try {
+      final result = await _call('server.webcams.list', const {});
+      final webcamUrl = extractMoonrakerWebcamUrl(baseUrl, result);
+      if (webcamUrl != null) {
+        _detectedWebcamUrl = webcamUrl;
+        _printerSubject.add(current);
+      }
+    } catch (_) {
+      // Webcam discovery is best-effort only.
+    }
+  }
+
+  void _replaceObjectState(Map<String, dynamic> status) {
+    _objectState
+      ..clear()
+      ..addAll(status);
+  }
+
+  void _mergeObjectState(Map<String, dynamic> delta) {
+    for (final entry in delta.entries) {
+      final existing = _asMap(_objectState[entry.key]);
+      final next = _asMap(entry.value);
+      if (existing != null && next != null) {
+        _objectState[entry.key] = {...existing, ...next};
+      } else {
+        _objectState[entry.key] = entry.value;
+      }
+    }
+  }
+
+  Map<String, dynamic> _mapStatusSnapshot() {
+    final snapshot = <String, dynamic>{};
+    for (final entry in _objectState.entries) {
+      final value = _asMap(entry.value);
+      if (value != null) {
+        snapshot[entry.key] = value;
+      }
+    }
+    return snapshot;
+  }
+
+  static Map<String, dynamic>? _asMap(Object? value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
+
+  static void _addObjectIfPresent(
+    Map<String, dynamic> target,
+    List<String> objects,
+    String objectName,
+    List<String> fields,
+  ) {
+    if (objects.contains(objectName)) {
+      target[objectName] = fields;
+    }
+  }
+
+  static bool _isThermalObjectKey(String key) {
+    return key.startsWith('temperature_sensor ') ||
+        key.startsWith('heater_generic ') ||
+        key.startsWith('temperature_fan ') ||
+        key == 'chamber' ||
+        key == 'frame_temp';
+  }
+
+  static bool _isBinarySensorObjectKey(String key) {
+    return key.startsWith('filament_switch_sensor ') ||
+        key.startsWith('filament_motion_sensor ') ||
+        key.startsWith('switch_sensor ') ||
+        key.startsWith('endstop_phase ');
+  }
+
+  static List<double> _parsePosition(List? primary, List? fallback) {
+    final values = (primary ?? fallback ?? const [])
+        .whereType<num>()
+        .map((value) => value.toDouble())
+        .toList(growable: true);
+    while (values.length < 4) {
+      values.add(0);
+    }
+    return values.take(4).toList(growable: false);
+  }
+
+  static double _normalizeFactor(Object? value) {
+    final raw = (value as num?)?.toDouble() ?? 1.0;
+    // Klipper/Moonraker can report overrides either as decimals (1.0 = 100%)
+    // or as whole percentages (100 = 100%), so normalize both formats.
+    return raw > 5 ? raw / 100.0 : raw;
+  }
+
+  static String? _deriveHttpBaseUrl(String wsUrl) {
+    final uri = Uri.tryParse(wsUrl);
+    if (uri == null || uri.host.isEmpty) return null;
+    final scheme = uri.scheme == 'wss' ? 'https' : 'http';
+    final base = Uri(
+      scheme: scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    );
+    return base.toString().replaceAll(RegExp(r'/$'), '');
   }
 }

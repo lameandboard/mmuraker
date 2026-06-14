@@ -25,7 +25,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _connectToPrinter(String machineId) async {
     await context.push('${Routes.dashboard}/$machineId');
-    if (mounted) setState(() {});
   }
 
   Future<void> _openPrinterEditor({String? machineId}) async {
@@ -34,7 +33,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } else {
       await context.push('${Routes.editPrinter}/$machineId');
     }
-    if (mounted) setState(() {});
   }
 
   Future<void> _openNotificationSettings(List<Machine> machines) async {
@@ -71,7 +69,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     if (selectedMachine == null || !mounted) return;
     await context.push('${Routes.notificationSettings}/${selectedMachine.id}');
-    if (mounted) setState(() {});
   }
 
   Future<void> _launchGitHub() async {
@@ -125,16 +122,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final machineService = ref.watch(machineServiceProvider);
-
-    List<Machine> machines;
-    try {
-      machines = machineService.machines;
-    } catch (_) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final machinesAsync = ref.watch(machineListProvider);
 
     return FutureBuilder<PackageInfo>(
       future: PackageInfo.fromPlatform(),
@@ -148,109 +136,121 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             icon: const Icon(Icons.add),
             label: const Text('Add Printer'),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            children: [
-              const _SectionHeader('Printers'),
-              if (machines.isEmpty)
-                const Card(
-                  child: ListTile(
-                    leading: Icon(Icons.print_disabled_outlined),
-                    title: Text('No printers configured'),
-                    subtitle: Text('Use Add Printer to create your first machine.'),
-                  ),
-                )
-              else
-                ...machines.map(
-                  (machine) => Card(
+          body: machinesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load settings.\n$error',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            data: (machines) => ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              children: [
+                const _SectionHeader('Printers'),
+                if (machines.isEmpty)
+                  const Card(
                     child: ListTile(
-                      leading: _PrinterLeading(hasVpn: machine.vpnConfig != null),
-                      title: Text(machine.name),
-                      subtitle: Text(machine.httpUrl),
-                      trailing: Wrap(
-                        spacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () => _connectToPrinter(machine.id),
-                            child: const Text('Connect'),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Edit printer',
-                            onPressed: () => _openPrinterEditor(machineId: machine.id),
-                          ),
-                        ],
+                      leading: Icon(Icons.print_disabled_outlined),
+                      title: Text('No printers configured'),
+                      subtitle: Text('Use Add Printer to create your first machine.'),
+                    ),
+                  )
+                else
+                  ...machines.map(
+                    (machine) => Card(
+                      child: ListTile(
+                        leading: _PrinterLeading(hasVpn: machine.vpnConfig != null),
+                        title: Text(machine.name),
+                        subtitle: Text(machine.httpUrl),
+                        trailing: Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => _connectToPrinter(machine.id),
+                              child: const Text('Connect'),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined),
+                              tooltip: 'Edit printer',
+                              onPressed: () => _openPrinterEditor(machineId: machine.id),
+                            ),
+                          ],
+                        ),
+                        onTap: () => _connectToPrinter(machine.id),
                       ),
-                      onTap: () => _connectToPrinter(machine.id),
                     ),
                   ),
-                ),
-              const Gap(12),
-              const _SectionHeader('Notifications'),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Notification Settings'),
-                  subtitle: Text(
-                    machines.isEmpty
-                        ? 'Add a printer to configure notifications.'
-                        : machines.length == 1
-                            ? 'Manage alerts for ${machines.first.name}'
-                            : 'Choose a printer to manage alerts.',
+                const Gap(12),
+                const _SectionHeader('Notifications'),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notification Settings'),
+                    subtitle: Text(
+                      machines.isEmpty
+                          ? 'Add a printer to configure notifications.'
+                          : machines.length == 1
+                              ? 'Manage alerts for ${machines.first.name}'
+                              : 'Choose a printer to manage alerts.',
+                    ),
+                    enabled: machines.isNotEmpty,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: machines.isEmpty
+                        ? null
+                        : () => _openNotificationSettings(machines),
                   ),
-                  enabled: machines.isNotEmpty,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: machines.isEmpty
-                      ? null
-                      : () => _openNotificationSettings(machines),
                 ),
-              ),
-              const Gap(12),
-              const _SectionHeader('Developer / Debug'),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.bug_report_outlined),
-                  title: const Text('Debug & Diagnostics'),
-                  subtitle: const Text(
-                      'View logs, generate reports, upload to GitHub Gist.'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push(Routes.debug),
+                const Gap(12),
+                const _SectionHeader('Developer / Debug'),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Debug & Diagnostics'),
+                    subtitle: const Text(
+                        'View logs, generate reports, upload to GitHub Gist.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.debug),
+                  ),
                 ),
-              ),
-              const Gap(12),
-              const _SectionHeader('About'),
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.info_outline),
-                      title: const Text('MMURaker'),
-                      subtitle: Text('Version $version'),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.code_outlined),
-                      title: const Text('View on GitHub'),
-                      trailing: const Icon(Icons.open_in_new),
-                      onTap: _launchGitHub,
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.gavel_outlined),
-                      title: const Text('License'),
-                      onTap: _showLicenseDialog,
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.favorite_outline),
-                      title: const Text('Credits'),
-                      onTap: _showCreditsDialog,
-                    ),
-                  ],
+                const Gap(12),
+                const _SectionHeader('About'),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.info_outline),
+                        title: const Text('MMURaker'),
+                        subtitle: Text('Version $version'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.code_outlined),
+                        title: const Text('View on GitHub'),
+                        trailing: const Icon(Icons.open_in_new),
+                        onTap: _launchGitHub,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.gavel_outlined),
+                        title: const Text('License'),
+                        onTap: _showLicenseDialog,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.favorite_outline),
+                        title: const Text('Credits'),
+                        onTap: _showCreditsDialog,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

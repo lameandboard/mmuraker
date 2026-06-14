@@ -3,6 +3,8 @@
 // mmuraker is Copyright (c) 2025 mmuraker contributors (same non-commercial license).
 // See LICENSE and NOTICE for full attribution and terms.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -38,6 +40,7 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
   bool _apiKeyObscured = true;
   bool _saving = false;
   bool _testingConnection = false;
+  bool _discoveringWebcam = false;
   bool _initialised = false;
   bool _syncingWs = false;
   bool _wsManuallyEdited = false;
@@ -215,8 +218,49 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
               : Theme.of(context).colorScheme.error,
         ),
       );
+      if (reachable && _webcamUrlController.text.trim().isEmpty) {
+        await _autofillWebcamUrl(showFeedback: true);
+      }
     } finally {
       if (mounted) setState(() => _testingConnection = false);
+    }
+  }
+
+  Future<void> _autofillWebcamUrl({bool showFeedback = false}) async {
+    final rawUrl = _httpUrlController.text.trim();
+    final coerced = coerceHttpUrl(rawUrl);
+    final urlError = _validateHttpUrl(coerced);
+    if (urlError != null) {
+      if (showFeedback && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(urlError)),
+        );
+      }
+      return;
+    }
+
+    setState(() => _discoveringWebcam = true);
+    try {
+      final webcamUrl = await ref.read(networkServiceProvider).discoverWebcamUrl(
+            _normaliseHttpUrl(coerced, _extractPort(coerced)),
+            apiKey: _emptyToNull(_apiKeyController.text),
+          );
+      if (!mounted) return;
+
+      if (webcamUrl != null) {
+        _webcamUrlController.text = webcamUrl;
+        if (showFeedback) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Webcam URL detected automatically.')),
+          );
+        }
+      } else if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No webcam URL could be detected.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _discoveringWebcam = false);
     }
   }
 
@@ -287,6 +331,11 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     }
     // Rebuild so the WS field updates via the listener.
     setState(() {});
+    if (_webcamUrlController.text.trim().isEmpty) {
+      // Network scan selection should stay snappy; webcam probing can finish
+      // in the background and fill the field when a candidate is found.
+      unawaited(_autofillWebcamUrl());
+    }
   }
 
   // ── URL helpers ───────────────────────────────────────────────────────────
@@ -464,6 +513,22 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
               ),
               keyboardType: TextInputType.url,
               validator: _validateOptionalHttpUrl,
+            ),
+            const Gap(8),
+            OutlinedButton.icon(
+              onPressed: (_saving || _testingConnection || _discoveringWebcam)
+                  ? null
+                  : () => _autofillWebcamUrl(showFeedback: true),
+              icon: _discoveringWebcam
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.videocam_outlined),
+              label: Text(
+                _discoveringWebcam ? 'Detecting Webcam...' : 'Auto-detect Webcam',
+              ),
             ),
             const Gap(16),
             OutlinedButton.icon(

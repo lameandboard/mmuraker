@@ -326,13 +326,14 @@ class _SpoolCard extends StatelessWidget {
                             if (f.settingsExtruderTemp != null)
                               TemperatureChip(
                                 label: 'Nozzle',
-                                temp:
-                                    f.settingsExtruderTemp!.toDouble(),
+                                current: f.settingsExtruderTemp!.toDouble(),
+                                target: f.settingsExtruderTemp!.toDouble(),
                               ),
                             if (f.settingsBedTemp != null)
                               TemperatureChip(
                                 label: 'Bed',
-                                temp: f.settingsBedTemp!.toDouble(),
+                                current: f.settingsBedTemp!.toDouble(),
+                                target: f.settingsBedTemp!.toDouble(),
                               ),
                           ],
                         ),

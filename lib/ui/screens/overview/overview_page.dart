@@ -19,8 +19,7 @@ class OverviewPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final machineService = ref.watch(machineServiceProvider);
-    final machines = machineService.machines;
+    final machinesAsync = ref.watch(machineListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,14 +32,22 @@ class OverviewPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: machines.isEmpty
-          ? _EmptyState(onAdd: () => context.push('/settings/add-printer'))
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: machines.length,
-              itemBuilder: (ctx, i) =>
-                  _MachineCard(machine: machines[i]),
-            ),
+      body: machinesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Could not load printers.\n$error', textAlign: TextAlign.center),
+          ),
+        ),
+        data: (machines) => machines.isEmpty
+            ? _EmptyState(onAdd: () => context.push('/settings/add-printer'))
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: machines.length,
+                itemBuilder: (ctx, i) => _MachineCard(machine: machines[i]),
+              ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'overviewAddPrinter',
         onPressed: () => context.push('/settings/add-printer'),
