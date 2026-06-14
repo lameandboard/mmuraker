@@ -786,7 +786,7 @@ class PrinterService {
   static double _normalizeFactor(Object? value) {
     final raw = (value as num?)?.toDouble() ?? 1.0;
     // Klipper/Moonraker can report overrides either as decimals (1.0 = 100%)
-    // or as whole percentages (100 = 100%), so normalise both formats.
+    // or as whole percentages (100 = 100%), so normalize both formats.
     return raw > 5 ? raw / 100.0 : raw;
   }
 

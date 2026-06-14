@@ -332,6 +332,8 @@ class _PrinterEditPageState extends ConsumerState<PrinterEditPage> {
     // Rebuild so the WS field updates via the listener.
     setState(() {});
     if (_webcamUrlController.text.trim().isEmpty) {
+      // Network scan selection should stay snappy; webcam probing can finish
+      // in the background and fill the field when a candidate is found.
       unawaited(_autofillWebcamUrl());
     }
   }
