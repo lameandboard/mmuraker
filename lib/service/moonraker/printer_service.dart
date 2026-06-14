@@ -96,8 +96,15 @@ class PrinterService {
     _detectedWebcamUrl = null;
 
     try {
+      final uri = () {
+        if (apiKey == null || apiKey.isEmpty) return Uri.parse(wsUrl);
+        final parsed = Uri.parse(wsUrl);
+        return parsed.replace(
+          queryParameters: {...parsed.queryParameters, 'token': apiKey},
+        );
+      }();
       _channel = WebSocketChannel.connect(
-        Uri.parse(wsUrl),
+        uri,
         protocols: const ['moonraker'],
       );
       _wsSub = _channel!.stream.listen(

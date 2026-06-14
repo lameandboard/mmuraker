@@ -117,7 +117,7 @@ class NetworkService {
       final candidate = '$baseUrl$relativePath';
       try {
         final response = await http
-            .get(Uri.parse(candidate), headers: headers)
+            .head(Uri.parse(candidate), headers: headers)
             .timeout(AppConstants.localReachabilityTimeout);
         if (response.statusCode < 400) return candidate;
       } catch (_) {
