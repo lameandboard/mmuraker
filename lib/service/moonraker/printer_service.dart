@@ -738,7 +738,7 @@ class PrinterService {
 
   static Map<String, dynamic>? _asMap(Object? value) {
     if (value is Map<String, dynamic>) {
-      return Map<String, dynamic>.from(value);
+      return value;
     }
     if (value is Map) {
       return value.map((key, value) => MapEntry(key.toString(), value));
