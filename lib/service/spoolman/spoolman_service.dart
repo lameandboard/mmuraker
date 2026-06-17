@@ -264,7 +264,7 @@ class SpoolmanService {
     var path = uri.path.replaceAll(RegExp(r'/$'), '');
     final lowerPath = path.toLowerCase();
     if (lowerPath.endsWith('/api/v1')) {
-      return uri.replace(path: path.isEmpty ? '/api/v1' : path).toString();
+      return uri.replace(path: path).toString();
     }
     if (lowerPath.endsWith('/api')) {
       path = '$path/v1';
