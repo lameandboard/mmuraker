@@ -57,7 +57,7 @@ class FilesPane extends HookConsumerWidget {
       try {
         await printerService.sendJsonRpc(
           'printer.print.start',
-          {'filename': file.path},
+          {'filename': _normalizeFilenameForPrint(file.path)},
         );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +132,10 @@ class FilesPane extends HookConsumerWidget {
               }
 
               final file = files[index - 1];
-              final isActive = activeFile == file.path || activeFile == file.name;
+              final normalizedPath = _normalizeFilenameForPrint(file.path);
+              final isActive = activeFile == file.path ||
+                  activeFile == file.name ||
+                  activeFile == normalizedPath;
               return Card(
                 color: isActive
                     ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
@@ -168,11 +171,7 @@ class FilesPane extends HookConsumerWidget {
       'server.files.list',
       {'root': 'gcodes'},
     );
-    final rawFiles = result is List
-        ? result
-        : result is Map<String, dynamic>
-            ? (result['files'] as List? ?? const [])
-            : const [];
+    final rawFiles = _extractFileEntries(result);
 
     final files = rawFiles
         .whereType<Map>()
@@ -181,6 +180,27 @@ class FilesPane extends HookConsumerWidget {
         .toList(growable: false)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return files;
+  }
+
+  List<dynamic> _extractFileEntries(Object? payload) {
+    final queue = <Object?>[payload];
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      if (current is List && current.every((e) => e is Map)) {
+        return current;
+      }
+      if (current is Map) {
+        final map = current.map((key, value) => MapEntry(key.toString(), value));
+        final files = map['files'];
+        if (files is List && files.every((e) => e is Map)) {
+          return files;
+        }
+        queue.add(map['result']);
+        queue.add(map['value']);
+        queue.add(map['gcodes']);
+      }
+    }
+    return const [];
   }
 
   GCodeFile _parseFile(Map<String, dynamic> json) {
@@ -202,6 +222,15 @@ class FilesPane extends HookConsumerWidget {
     return lowered.endsWith('.gcode') ||
         lowered.endsWith('.gco') ||
         lowered.endsWith('.gc');
+  }
+
+  String _normalizeFilenameForPrint(String path) {
+    var normalized = path.replaceAll('\\', '/').trim();
+    if (normalized.startsWith('/')) normalized = normalized.substring(1);
+    if (normalized.toLowerCase().startsWith('gcodes/')) {
+      normalized = normalized.substring('gcodes/'.length);
+    }
+    return normalized;
   }
 
   String _formatBytes(int bytes) {

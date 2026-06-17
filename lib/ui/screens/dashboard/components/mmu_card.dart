@@ -169,6 +169,7 @@ class _ToolChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final filamentColor = _parseColor(tool.color);
+    final effectiveColor = filamentColor ?? _gateStateColor(tool.gateState, cs);
     final isActive = tool.isActive;
 
     return GestureDetector(
@@ -193,7 +194,7 @@ class _ToolChip extends StatelessWidget {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: filamentColor,
+                color: effectiveColor,
                 border: Border.all(
                   color: cs.outline.withOpacity(0.4),
                 ),
@@ -207,14 +208,19 @@ class _ToolChip extends StatelessWidget {
                     color: isActive ? cs.primary : cs.onSurfaceVariant,
                   ),
             ),
+            Icon(
+              _gateStateIcon(tool.gateState),
+              size: 12,
+              color: cs.onSurfaceVariant.withOpacity(0.75),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Color _parseColor(String? hex) {
-    if (hex == null || hex.isEmpty) return AppConstants.defaultFilamentColor;
+  Color? _parseColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
     try {
       final clean = hex.replaceAll('#', '').trim();
       if (clean.length == 6) {
@@ -224,7 +230,25 @@ class _ToolChip extends StatelessWidget {
         return Color(int.parse(clean, radix: 16));
       }
     } catch (_) {}
-    return AppConstants.defaultFilamentColor;
+    return null;
+  }
+
+  Color _gateStateColor(MmuGateState state, ColorScheme cs) {
+    return switch (state) {
+      MmuGateState.loaded => AppConstants.defaultFilamentColor,
+      MmuGateState.available => cs.tertiaryContainer,
+      MmuGateState.empty => cs.surfaceContainerHighest,
+      MmuGateState.unknown => cs.surfaceContainerHighest,
+    };
+  }
+
+  IconData _gateStateIcon(MmuGateState state) {
+    return switch (state) {
+      MmuGateState.loaded => Icons.check_circle_outline,
+      MmuGateState.available => Icons.radio_button_checked,
+      MmuGateState.empty => Icons.remove_circle_outline,
+      MmuGateState.unknown => Icons.help_outline,
+    };
   }
 }
 

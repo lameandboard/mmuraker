@@ -43,14 +43,14 @@ String? extractMoonrakerWebcamUrl(String baseUrl, Object? payload) {
 
   for (final webcam in webcams) {
     for (final key in const [
-      'stream_url',
-      'streamUrl',
-      'url_stream',
-      'urlStream',
       'snapshot_url',
       'snapshotUrl',
       'url_snapshot',
       'urlSnapshot',
+      'stream_url',
+      'streamUrl',
+      'url_stream',
+      'urlStream',
       'url',
     ]) {
       final resolved = absolutizeHttpUrl(baseUrl, webcam[key]?.toString());
@@ -85,13 +85,39 @@ List<Map<String, dynamic>> _extractMoonrakerWebcams(Map<String, dynamic> root) {
 
 List<Map<String, dynamic>> _normaliseWebcamList(Object? value) {
   if (value is List) {
-    return value.map(_asStringKeyedMap).where((map) => map.isNotEmpty).toList();
+    final out = <Map<String, dynamic>>[];
+    for (final item in value) {
+      out.addAll(_normaliseWebcamList(item));
+    }
+    return out;
   }
   if (value is Map) {
-    return value.values
-        .map(_asStringKeyedMap)
-        .where((map) => map.isNotEmpty)
-        .toList();
+    final map = _asStringKeyedMap(value);
+    if (map.isEmpty) return const [];
+    if (_looksLikeWebcamDefinition(map)) {
+      return [map];
+    }
+    if (map.containsKey('webcams')) {
+      final nested = _normaliseWebcamList(map['webcams']);
+      if (nested.isNotEmpty) return nested;
+    }
+    final out = <Map<String, dynamic>>[];
+    for (final entry in map.values) {
+      out.addAll(_normaliseWebcamList(entry));
+    }
+    return out;
   }
   return const [];
+}
+
+bool _looksLikeWebcamDefinition(Map<String, dynamic> map) {
+  return map.containsKey('stream_url') ||
+      map.containsKey('streamUrl') ||
+      map.containsKey('url_stream') ||
+      map.containsKey('urlStream') ||
+      map.containsKey('snapshot_url') ||
+      map.containsKey('snapshotUrl') ||
+      map.containsKey('url_snapshot') ||
+      map.containsKey('urlSnapshot') ||
+      map.containsKey('url');
 }
