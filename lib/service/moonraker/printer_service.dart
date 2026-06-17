@@ -536,27 +536,38 @@ class PrinterService {
   MmuState _parseMmuState(Map<String, dynamic> data, String objectKey) {
     final activeTool = (data['tool'] as num?)?.toInt() ??
         (data['current_tool'] as num?)?.toInt() ??
+        (data['selected_tool'] as num?)?.toInt() ??
+        (data['tool_selected'] as num?)?.toInt() ??
         -1;
+    final gateStates = _parseMmuGateStates(data);
+    final colors = _parseMmuColors(data);
     final toolCount = (data['num_gates'] as num?)?.toInt() ??
         (data['tool_count'] as num?)?.toInt() ??
-        0;
+        _listLength(data['gates']) ??
+        _listLength(data['gate_states']) ??
+        _listLength(data['gate_status']) ??
+        _listLength(data['gate_statuses']) ??
+        (colors.isNotEmpty ? colors.length : null) ??
+        gateStates.length;
+    final state = (data['state'] as String?) ?? (data['print_state'] as String?);
+    final loweredState = (state ?? '').toLowerCase();
     final busy = data['is_homed'] == false ||
-        (data['print_state'] as String? ?? '') == 'loading' ||
-        (data['print_state'] as String? ?? '') == 'unloading';
+        loweredState.contains('load') ||
+        loweredState.contains('unload') ||
+        loweredState.contains('home') ||
+        loweredState.contains('move') ||
+        loweredState.contains('busy');
     final error = data['last_error'] as String? ??
         data['error'] as String?;
-    final colors = (data['slicer_colors'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
 
     return MmuState(
       activeTool: activeTool,
       toolCount: toolCount,
       busy: busy,
       error: error,
-      printState: data['print_state'] as String? ?? 'unknown',
+      printState: state ?? 'unknown',
       filamentColors: colors,
+      gateStates: gateStates,
       objectKey: objectKey,
     );
   }
@@ -762,6 +773,130 @@ class PrinterService {
     if (objects.contains(objectName)) {
       target[objectName] = fields;
     }
+  }
+
+  static int? _listLength(Object? value) {
+    if (value is List) return value.length;
+    if (value is Map) return value.length;
+    return null;
+  }
+
+  static List<String> _parseMmuColors(Map<String, dynamic> data) {
+    final candidates = [
+      data['slicer_colors'],
+      data['filament_colors'],
+      data['colors'],
+      data['colour'],
+      data['colours'],
+    ];
+    for (final candidate in candidates) {
+      final parsed = _extractStringList(candidate);
+      if (parsed.isNotEmpty) return parsed;
+    }
+    return const [];
+  }
+
+  static List<String> _extractStringList(Object? value) {
+    if (value is List) {
+      return value
+          .map((entry) => entry?.toString() ?? '')
+          .where((entry) => entry.isNotEmpty)
+          .toList();
+    }
+    if (value is Map) {
+      final keyed = value.map((key, value) => MapEntry(key.toString(), value));
+      final numericKeys = keyed.keys
+          .map(int.tryParse)
+          .whereType<int>()
+          .toList()
+        ..sort();
+      if (numericKeys.isNotEmpty) {
+        return [
+          for (final key in numericKeys) keyed['$key']?.toString() ?? '',
+        ].where((entry) => entry.isNotEmpty).toList();
+      }
+      return keyed.values
+          .map((entry) => entry?.toString() ?? '')
+          .where((entry) => entry.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  static List<MmuGateState> _parseMmuGateStates(Map<String, dynamic> data) {
+    final candidates = [
+      data['gate_states'],
+      data['gate_status'],
+      data['gate_statuses'],
+      data['gates'],
+    ];
+    for (final candidate in candidates) {
+      final parsed = _extractGateStates(candidate);
+      if (parsed.isNotEmpty) return parsed;
+    }
+    return const [];
+  }
+
+  static List<MmuGateState> _extractGateStates(Object? value) {
+    if (value is List) {
+      return value.map(_normaliseGateState).toList();
+    }
+    if (value is Map) {
+      final keyed = value.map((key, value) => MapEntry(key.toString(), value));
+      final numericKeys = keyed.keys
+          .map(int.tryParse)
+          .whereType<int>()
+          .toList()
+        ..sort();
+      final orderedValues = numericKeys.isNotEmpty
+          ? [for (final key in numericKeys) keyed['$key']]
+          : keyed.values.toList(growable: false);
+      return orderedValues.map(_normaliseGateState).toList();
+    }
+    return const [];
+  }
+
+  static MmuGateState _normaliseGateState(Object? value) {
+    if (value == null) return MmuGateState.unknown;
+    if (value is bool) return value ? MmuGateState.loaded : MmuGateState.empty;
+    if (value is num) {
+      if (value >= 2) return MmuGateState.loaded;
+      if (value >= 1) return MmuGateState.available;
+      return MmuGateState.empty;
+    }
+    if (value is Map) {
+      final map = value.map((key, value) => MapEntry(key.toString(), value));
+      final status = map['status'] ?? map['state'] ?? map['filament_state'];
+      final filamentPresent =
+          map['filament_present'] ?? map['has_filament'] ?? map['loaded'];
+      final fromStatus = _normaliseGateState(status);
+      if (fromStatus != MmuGateState.unknown) return fromStatus;
+      if (filamentPresent != null) return _normaliseGateState(filamentPresent);
+      return MmuGateState.unknown;
+    }
+
+    final token = value.toString().trim().toLowerCase();
+    if (token.isEmpty) return MmuGateState.unknown;
+    if (token == '1' || token == '2') return MmuGateState.loaded;
+    if (token == '0') return MmuGateState.empty;
+    if (token.contains('loaded') ||
+        token.contains('active') ||
+        token.contains('extruder')) {
+      return MmuGateState.loaded;
+    }
+    if (token.contains('avail') ||
+        token.contains('present') ||
+        token.contains('standby') ||
+        token.contains('ready')) {
+      return MmuGateState.available;
+    }
+    if (token.contains('empty') ||
+        token.contains('none') ||
+        token.contains('missing') ||
+        token.contains('unloaded')) {
+      return MmuGateState.empty;
+    }
+    return MmuGateState.unknown;
   }
 
   static bool _isThermalObjectKey(String key) {

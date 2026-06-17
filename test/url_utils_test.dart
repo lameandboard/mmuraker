@@ -55,6 +55,19 @@ void main() {
   });
 
   group('extractMoonrakerWebcamUrl', () {
+    test('prefers snapshot urls when both snapshot and stream are present', () {
+      final url = extractMoonrakerWebcamUrl('http://printer.local:7125', {
+        'webcams': [
+          {
+            'stream_url': '/webcam/?action=stream',
+            'snapshot_url': '/webcam/?action=snapshot',
+          },
+        ],
+      });
+
+      expect(url, 'http://printer.local:7125/webcam/?action=snapshot');
+    });
+
     test('resolves relative stream urls from webcam list responses', () {
       final url = extractMoonrakerWebcamUrl('http://printer.local:7125', {
         'webcams': [
@@ -75,6 +88,20 @@ void main() {
       });
 
       expect(url, 'http://192.168.1.50:7125/webcam/?action=snapshot');
+    });
+
+    test('supports nested database payloads with webcams key', () {
+      final url = extractMoonrakerWebcamUrl('http://printer.local:7125', {
+        'result': {
+          'value': {
+            'webcams': {
+              'cam1': {'stream_url': '/webcam/?action=stream'},
+            },
+          },
+        },
+      });
+
+      expect(url, 'http://printer.local:7125/webcam/?action=stream');
     });
   });
 }

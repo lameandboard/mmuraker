@@ -28,22 +28,32 @@ class WebcamCard extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final webcamUrl = this.webcamUrl ?? machine.safeWebcamUrl;
+    final primaryUrl = webcamUrl == null || webcamUrl.isEmpty
+        ? null
+        : _preferredDisplayUrl(webcamUrl);
+    final alternateUrl = webcamUrl == null || webcamUrl.isEmpty
+        ? null
+        : _alternateDisplayUrl(webcamUrl, primaryUrl);
+    final useAutoRefresh = primaryUrl != null && _isSnapshotLikeUrl(primaryUrl);
+    final imageHeaders = machine.apiKey?.isNotEmpty == true
+        ? <String, String>{'X-Api-Key': machine.apiKey!}
+        : const <String, String>{};
     final refreshTick = useState(DateTime.now().millisecondsSinceEpoch);
 
     useEffect(() {
-      if (webcamUrl == null || webcamUrl.isEmpty) return null;
+      if (!useAutoRefresh) return null;
       final timer = Timer.periodic(const Duration(seconds: 2), (_) {
         refreshTick.value = DateTime.now().millisecondsSinceEpoch;
       });
       return timer.cancel;
-    }, [webcamUrl]);
+    }, [primaryUrl, useAutoRefresh]);
 
-    final resolvedUrl = webcamUrl == null || webcamUrl.isEmpty
+    final resolvedUrl = primaryUrl == null
         ? null
-        : _withCacheBust(webcamUrl, refreshTick.value);
-    final fallbackUrl = webcamUrl == null || webcamUrl.isEmpty
+        : _withCacheBust(primaryUrl, refreshTick.value, enabled: useAutoRefresh);
+    final fallbackUrl = alternateUrl == null
         ? null
-        : _snapshotFallbackUrl(webcamUrl);
+        : _withCacheBust(alternateUrl, refreshTick.value, enabled: useAutoRefresh);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -84,6 +94,7 @@ class WebcamCard extends HookConsumerWidget {
                     builder: (_) => _FullscreenWebcamPage(
                       imageUrl: resolvedUrl,
                       fallbackUrl: fallbackUrl,
+                      headers: imageHeaders,
                     ),
                   ),
                 ),
@@ -94,18 +105,10 @@ class WebcamCard extends HookConsumerWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        if (fallbackUrl != null)
-                          CachedNetworkImage(
-                            imageUrl: fallbackUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const ColoredBox(
-                              color: Color(0xFF111318),
-                              child: Center(child: Icon(Icons.videocam_off)),
-                            ),
-                          ),
                         Image.network(
                           resolvedUrl,
                           key: ValueKey(resolvedUrl),
+                          headers: imageHeaders,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => fallbackUrl == null
                               ? const ColoredBox(
@@ -114,6 +117,7 @@ class WebcamCard extends HookConsumerWidget {
                                 )
                               : CachedNetworkImage(
                                   imageUrl: fallbackUrl,
+                                  httpHeaders: imageHeaders,
                                   fit: BoxFit.cover,
                                   errorWidget: (_, __, ___) => const ColoredBox(
                                     color: Color(0xFF111318),
@@ -132,8 +136,10 @@ class WebcamCard extends HookConsumerWidget {
     );
   }
 
-  String _withCacheBust(String url, int timestamp) {
-    final uri = Uri.parse(url);
+  String _withCacheBust(String url, int timestamp, {required bool enabled}) {
+    if (!enabled) return url;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
     return uri.replace(
       queryParameters: {
         ...uri.queryParameters,
@@ -142,12 +148,60 @@ class WebcamCard extends HookConsumerWidget {
     ).toString();
   }
 
-  String _snapshotFallbackUrl(String url) {
-    final uri = Uri.parse(url);
-    final path = uri.path.endsWith('.m3u8')
-        ? uri.path.replaceFirst(RegExp(r'\.m3u8$'), '.jpg')
-        : uri.path;
-    return uri.replace(path: path).toString();
+  String _preferredDisplayUrl(String url) {
+    final snapshot = _snapshotFallbackUrl(url);
+    if (snapshot != null && _isStreamLikeUrl(url)) {
+      return snapshot;
+    }
+    return url;
+  }
+
+  String? _alternateDisplayUrl(String url, String? preferred) {
+    final snapshot = _snapshotFallbackUrl(url);
+    if (preferred != null && snapshot != null && preferred != snapshot) {
+      return snapshot;
+    }
+    if (preferred != null && preferred != url) return url;
+    return null;
+  }
+
+  bool _isStreamLikeUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('action=stream') ||
+        lower.endsWith('/stream') ||
+        lower.endsWith('.m3u8');
+  }
+
+  bool _isSnapshotLikeUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('action=snapshot') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png');
+  }
+
+  String? _snapshotFallbackUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final path = uri.path;
+    final query = uri.queryParameters;
+    if ((query['action'] ?? '').toLowerCase() == 'stream') {
+      return uri
+          .replace(
+            queryParameters: {
+              ...query,
+              'action': 'snapshot',
+            },
+          )
+          .toString();
+    }
+    if (path.toLowerCase().endsWith('/stream')) {
+      return uri.replace(path: path.replaceFirst(RegExp(r'/stream$'), '/snapshot')).toString();
+    }
+    if (path.toLowerCase().endsWith('.m3u8')) {
+      return uri.replace(path: path.replaceFirst(RegExp(r'\.m3u8$'), '.jpg')).toString();
+    }
+    return null;
   }
 }
 
@@ -185,10 +239,12 @@ class _FullscreenWebcamPage extends StatelessWidget {
   const _FullscreenWebcamPage({
     required this.imageUrl,
     required this.fallbackUrl,
+    required this.headers,
   });
 
   final String imageUrl;
   final String? fallbackUrl;
+  final Map<String, String> headers;
 
   @override
   Widget build(BuildContext context) {
@@ -203,11 +259,13 @@ class _FullscreenWebcamPage extends StatelessWidget {
             aspectRatio: 16 / 9,
             child: Image.network(
               imageUrl,
+              headers: headers,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => fallbackUrl == null
                   ? const Icon(Icons.videocam_off, color: Colors.white70, size: 48)
                   : CachedNetworkImage(
                       imageUrl: fallbackUrl!,
+                      httpHeaders: headers,
                       fit: BoxFit.contain,
                       errorWidget: (_, __, ___) => const Icon(
                         Icons.videocam_off,

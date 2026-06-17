@@ -104,8 +104,12 @@ class ConsolePane extends HookConsumerWidget {
       }
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
+    final viewInsets = MediaQuery.of(context).viewInsets;
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + viewInsets.bottom),
       child: Column(
         children: [
           Expanded(
@@ -165,60 +169,65 @@ class ConsolePane extends HookConsumerWidget {
             ),
           ),
           const Gap(12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SectionHeader('Macros'),
-                  const Gap(8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+          Flexible(
+            fit: FlexFit.loose,
+            child: SingleChildScrollView(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final macro in _defaultConsoleMacros)
-                        ActionChip(
-                          label: Text(macro),
-                          onPressed: isSending.value
-                              ? null
-                              : () => submitCommand(macro),
-                        ),
-                    ],
-                  ),
-                  const Gap(16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          enabled: !isSending.value,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: submitCommand,
-                          decoration: const InputDecoration(
-                            labelText: 'Command',
-                            hintText: 'Enter G-code or macro',
-                            border: OutlineInputBorder(),
+                      const SectionHeader('Macros'),
+                      const Gap(8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final macro in _defaultConsoleMacros)
+                            ActionChip(
+                              label: Text(macro),
+                              onPressed: isSending.value
+                                  ? null
+                                  : () => submitCommand(macro),
+                            ),
+                        ],
+                      ),
+                      const Gap(16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: controller,
+                              enabled: !isSending.value,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: submitCommand,
+                              decoration: const InputDecoration(
+                                labelText: 'Command',
+                                hintText: 'Enter G-code or macro',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const Gap(12),
-                      FilledButton.icon(
-                        onPressed: isSending.value
-                            ? null
-                            : () => submitCommand(controller.text),
-                        icon: isSending.value
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.send),
-                        label: const Text('Send'),
+                          const Gap(12),
+                          FilledButton.icon(
+                            onPressed: isSending.value
+                                ? null
+                                : () => submitCommand(controller.text),
+                            icon: isSending.value
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.send),
+                            label: const Text('Send'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
